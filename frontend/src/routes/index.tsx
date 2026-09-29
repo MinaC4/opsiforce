@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from '@tanstack/solid-router';
 import { createSignal, For, Show } from 'solid-js';
 import { toast } from 'solid-sonner';
 import { type Project } from '~/api/client';
+import { limitRefusalMessage } from '~/api/limits';
 import { useCreateDefaultProject } from '~/api/default-project-target';
 import { usePermissions } from '~/api/permissions';
 import { Permission } from '~/constants/permissions';
@@ -9,6 +10,7 @@ import { EXAMPLES, type Example } from '~/data/examples';
 import { ArrowUp, LoaderCircle, Upload } from '~/components/icons';
 import { ProjectImportDialog } from '~/components/project/project-import-dialog';
 import { cn } from '~/lib/cn';
+import { opencodeMessageId } from '~/lib/opencode-id';
 
 export const Route = createFileRoute('/')({
   component: HomePage,
@@ -50,7 +52,7 @@ function HomePage() {
     navigate({
       to: '/projects/$projectId',
       params: { projectId: project.id },
-      search: { prompt: text || undefined },
+      search: text ? { prompt: text, promptId: opencodeMessageId() } : { prompt: undefined, promptId: undefined },
     });
   };
 
@@ -62,8 +64,8 @@ function HomePage() {
       const project = await createDefaultProject.createProject();
       toast.success('Project created');
       goToProject(project);
-    } catch {
-      toast.error('Failed to create project');
+    } catch (err) {
+      toast.error(limitRefusalMessage(err, 'Failed to create project'));
     }
   };
 

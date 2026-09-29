@@ -4,21 +4,27 @@ import {
   Controller,
   ForbiddenException,
   Headers,
-  Logger,
   NotFoundException,
   Param,
   Post,
+  Req,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { FastifyRequest } from 'fastify';
 import { appCanonicalHost } from '../common/app-host';
+import { GatewayKeyService } from '../gateway/gateway-key.service';
+import { ForwardedIdentityService } from '../identity/forwarded-identity.service';
+import { gatewayBearerOf } from '../public-api/auth/gateway-bearer';
+import { ProjectProvenanceRepository } from '../project/project-provenance.repository';
+import { isHiddenProjectReachable, isProjectAccessible } from '../project/project-visibility';
 import { ProjectService, type EnsureEnvironmentResult, type ProjectActivityKind } from '../project/project.service';
 import { RequestLogMode } from '../project/project.types';
 import { ProjectEnvironmentService } from '../project-environment/project-environment.service';
 import type { ProjectEnvironmentContext } from '../project-environment/project-environment.types';
 import { TenantService } from '../tenant/tenant.service';
 import { Public } from '../tenant/tenant.decorator';
-import { AgentUpdateService } from '../agent-update/agent-update.service';
+import { AgentSessionGateway } from '../agent-session/agent-session.gateway';
 import { ProxyService } from './proxy.service';
 
 type ProxySurface = 'agent' | 'app' | 'vscode' | 'db';
@@ -44,7 +50,6 @@ interface EnsureProxyResponse {
 @Public()
 @Controller('internal/proxy')
 export class ProxyController {
-  private readonly logger = new Logger(ProxyController.name);
   private readonly proxyControlToken: string;
   private readonly appsHostname: string;
 
@@ -54,7 +59,10 @@ export class ProxyController {
     private readonly projectService: ProjectService,
     private readonly projectEnvironmentService: ProjectEnvironmentService,
     private readonly tenantService: TenantService,
-    private readonly agentUpdateService: AgentUpdateService
+    private readonly agentSessionGateway: AgentSessionGateway,
+    private readonly identities: ForwardedIdentityService,
+    private readonly gatewayKeys: GatewayKeyService,
+    private readonly provenance: ProjectProvenanceRepository
   ) {
     this.proxyControlToken = this.configService.getOrThrow<string>('proxyControlToken');
     this.appsHostname = this.configService.getOrThrow<string>('appsHostname');
@@ -65,7 +73,7 @@ export class ProxyController {
     @Param('environmentId') environmentId: string,
     @Body() body: ProxySurfaceBody,
     @Headers('x-proxy-control-token') token: string | undefined,
-    @Headers('x-forwarded-groups') groupsHeader: string | undefined
+    @Req() request: FastifyRequest
   ): Promise<EnsureProxyResponse> {
     this.assertToken(token);
 
@@ -76,23 +84,13 @@ export class ProxyController {
 
     if (surface === 'agent') {
       if (!env.tenantId) throw new BadRequestException(`Project environment ${environmentId} not yet claimed`);
-      await this.assertProjectTenantAccess(env.tenantId, groupsHeader);
+      await this.assertSurfaceAccess(env.tenantId, env.projectId, request);
     }
 
-    const activity = activityForSurface(surface);
-    let ensured = await this.projectService.ensureEnvironment(env, activity);
-
-    if (surface === 'agent' && ensured.state === 'ready' && env.isDefault) {
-      const reload = await this.agentUpdateService.applyPendingReloadForProject(env.projectId).catch((err) => {
-        this.logger.warn(
-          `Failed to apply pending agent reload for project ${env.projectId}: ${(err as Error).message}`
-        );
-        return null;
-      });
-      if (reload?.podRecreated) {
-        ensured = await this.projectService.ensureEnvironmentById(environmentId, activity);
-      }
-    }
+    const ensured =
+      surface === 'agent'
+        ? await this.agentSessionGateway.ensureAgentSurface(env)
+        : await this.projectService.ensureEnvironment(env, activityForSurface(surface));
 
     return this.toEnsureResponse(surface, ensured, env);
   }
@@ -155,13 +153,56 @@ export class ProxyController {
     };
   }
 
-  private async assertProjectTenantAccess(tenantId: string, groupsHeader: string | undefined): Promise<void> {
-    const tenantNames = this.tenantService.resolveAccessibleTenantNames(groupsHeader);
-    if (tenantNames.length === 0) throw new ForbiddenException('No opsiforce tenants assigned');
+  private async assertSurfaceAccess(tenantId: string, projectId: string, request: FastifyRequest): Promise<void> {
+    const gatewayToken = gatewayBearerOf(request.headers);
+    if (gatewayToken) {
+      await this.assertGatewayCallerAccess(gatewayToken, tenantId, projectId);
+      return;
+    }
 
+    const forwarded = this.identities.read(request);
+    if (!forwarded) throw new UnauthorizedException('No forwarded identity');
+
+    const tenantNames = this.tenantService.resolveAccessibleTenantNames(forwarded.groups);
     const tenant = await this.tenantService.getTenantById(tenantId);
     if (!tenant || !tenantNames.includes(tenant.name)) {
       throw new NotFoundException('Project not found');
+    }
+
+    const identity = await this.identities.resolve(forwarded, tenantId);
+    await this.assertKindStampedVisibility(tenantId, projectId, identity.platformId);
+    if (!(await isProjectAccessible(tenantId, identity.platformId, projectId))) {
+      throw new NotFoundException('Project not found');
+    }
+  }
+
+  /** The third predicate beside tenant membership and project visibility (ADR-0064). */
+  private async assertKindStampedVisibility(tenantId: string, projectId: string, userId: string): Promise<void> {
+    if ((await this.provenance.findKind(projectId)) === null) return;
+    if (await isHiddenProjectReachable(tenantId, userId, projectId)) return;
+    throw new ForbiddenException("This chat's skill or agent is private to the member who created it");
+  }
+
+  private async assertGatewayCallerAccess(token: string, tenantId: string, projectId: string): Promise<void> {
+    const key = await this.gatewayKeys.validateToken(token, 'platform-api');
+    if (!key) throw new UnauthorizedException('Unknown gateway key');
+    if (key.tenantId !== tenantId) throw new NotFoundException('Project not found');
+
+    const creatorId = await this.provenance.findCreatorId(key.projectId);
+    if (!creatorId) throw new UnauthorizedException('The calling Project has no creator');
+
+    const creator = await this.identities.resolveByPlatformId(creatorId);
+    const tenant = await this.tenantService.getTenantById(tenantId);
+    if (!creator || !tenant || !this.tenantService.resolveAccessibleTenantNames(creator.groups).includes(tenant.name)) {
+      throw new NotFoundException('Project not found');
+    }
+
+    if (!(await isProjectAccessible(tenantId, creatorId, projectId))) {
+      throw new NotFoundException('Project not found');
+    }
+
+    if (!(await this.provenance.isCreatedByProject(projectId, key.projectId))) {
+      throw new ForbiddenException('The calling Project did not create this Project');
     }
   }
 

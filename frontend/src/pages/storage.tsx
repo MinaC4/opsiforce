@@ -5,18 +5,19 @@ import {
   usePlatformStorage,
   type PlatformStorageBuckets,
   type PlatformStorageProject,
+  type PlatformStorageTemplates,
   type PlatformStorageTenant,
   type PlatformStorageView,
 } from '~/api/platform-storage';
 import { usePermissions } from '~/api/permissions';
 import { Permission } from '~/constants/permissions';
-import ConfirmDialog from '~/components/ui/confirm-dialog';
+import { ConfirmDialog } from '~/components/ui/confirm-dialog';
 import { Popover, PopoverTrigger, PopoverContent } from '~/components/ui/popover';
 import { formatBytes, formatShare } from '~/lib/format-bytes';
 import { cn } from '~/lib/cn';
 import { Badge, badgeVariants } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
-import Skeleton from '~/components/ui/skeleton';
+import { Skeleton } from '~/components/ui/skeleton';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '~/components/ui/table';
 import { Tooltip, TooltipTrigger, TooltipContent } from '~/components/ui/tooltip';
 import {
@@ -27,6 +28,7 @@ import {
   Clock,
   Database,
   Download,
+  Files,
   FolderKanban,
   Inbox,
   Layers,
@@ -56,6 +58,10 @@ const UNACCOUNTED_NOTE =
 
 function tenantColor(index: number): string {
   return TENANT_SEGMENT_COLORS[index % TENANT_SEGMENT_COLORS.length];
+}
+
+function agentCount(count: number): string {
+  return `${count} ${count === 1 ? 'agent' : 'agents'}`;
 }
 
 function formatSnapshotClock(iso: string): string {
@@ -88,6 +94,13 @@ function bucketRows(buckets: PlatformStorageBuckets): BucketRow[] {
       detail: `${buckets.orphaned.count} ${buckets.orphaned.count === 1 ? 'directory' : 'directories'}`,
       icon: Layers,
     },
+    {
+      label: 'Agent Templates (no organization)',
+      bytes: buckets.templates.bytes,
+      error: buckets.templates.error,
+      detail: agentCount(buckets.templates.count),
+      icon: Files,
+    },
     { label: 'Exports', bytes: buckets.exports.bytes, error: buckets.exports.error, icon: Download },
     { label: 'Imports', bytes: buckets.imports.bytes, error: buckets.imports.error, icon: Upload },
   ];
@@ -106,9 +119,7 @@ function shownUnaccountedBytes(snapshot: PlatformStorageView): number {
 }
 
 function hasLedgerRows(snapshot: PlatformStorageView): boolean {
-  return (
-    snapshot.tenants.length > 0 || bucketsTotalBytes(snapshot.buckets) > 0 || shownUnaccountedBytes(snapshot) > 0
-  );
+  return snapshot.tenants.length > 0 || bucketsTotalBytes(snapshot.buckets) > 0 || shownUnaccountedBytes(snapshot) > 0;
 }
 
 function useToggleSet() {
@@ -309,6 +320,11 @@ function RollupTable(props: { snapshot: PlatformStorageView }) {
                   onToggle={() => tenants.toggle(tenant.id)}
                 />
                 <Show when={tenants.has(tenant.id)}>
+                  <TemplatesRow
+                    templates={tenant.templates}
+                    shareBaseBytes={shareBaseBytes()}
+                    maxBytes={largestTenantBytes()}
+                  />
                   <For each={tenant.projects}>
                     {(project) => (
                       <>
@@ -528,8 +544,8 @@ function PendingDeletionBadge(props: { tenant: PlatformStorageTenant }) {
       when={!pending().error}
       fallback="Some pending-deletion directories could not be measured; this aggregate is incomplete."
     >
-      {pending().count} {pending().count === 1 ? 'directory' : 'directories'} of deleted project environments still
-      on disk for the recovery window. Cleanup will reclaim {formatBytes(pending().bytes)}.
+      {pending().count} {pending().count === 1 ? 'directory' : 'directories'} of deleted project environments still on
+      disk for the recovery window. Cleanup will reclaim {formatBytes(pending().bytes)}.
     </Show>
   );
 
@@ -554,7 +570,11 @@ function PendingDeletionBadge(props: { tenant: PlatformStorageTenant }) {
         }
       >
         <Popover>
-          <PopoverTrigger as="span" class={pendingDeletionBadgeClass(true)} onClick={(event: MouseEvent) => event.stopPropagation()}>
+          <PopoverTrigger
+            as="span"
+            class={pendingDeletionBadgeClass(true)}
+            onClick={(event: MouseEvent) => event.stopPropagation()}
+          >
             {badgeBody()}
             <ChevronDown class="w-2.5 h-2.5" />
           </PopoverTrigger>
@@ -613,6 +633,33 @@ function ProjectRow(props: {
         <SizeBar bytes={props.project.totalBytes} max={props.maxBytes} />
       </TableCell>
     </TableRow>
+  );
+}
+
+function TemplatesRow(props: { templates: PlatformStorageTemplates; shareBaseBytes: number; maxBytes: number }) {
+  return (
+    <Show when={props.templates.count > 0 || props.templates.error}>
+      <TableRow class="hover:bg-transparent">
+        <TableCell>
+          <div class="flex items-center gap-2 pl-6">
+            <span class="w-3.5 shrink-0" />
+            <Files class="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+            <span class="text-sm truncate">Agent Templates</span>
+            <span class="text-xs text-muted-foreground shrink-0">· {agentCount(props.templates.count)}</span>
+            <Show when={props.templates.error}>
+              <MeasurementError label="Some Template folders could not be measured; this total is incomplete." />
+            </Show>
+          </div>
+        </TableCell>
+        <TableCell class="text-right text-sm tabular-nums">{formatBytes(props.templates.bytes)}</TableCell>
+        <TableCell class="text-right text-xs tabular-nums text-muted-foreground">
+          {formatShare(props.templates.bytes, props.shareBaseBytes)}
+        </TableCell>
+        <TableCell>
+          <SizeBar bytes={props.templates.bytes} max={props.maxBytes} />
+        </TableCell>
+      </TableRow>
+    </Show>
   );
 }
 

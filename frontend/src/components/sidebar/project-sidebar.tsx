@@ -5,6 +5,7 @@ import { isSortable } from '@dnd-kit/solid/sortable';
 import { useQueryClient } from '@tanstack/solid-query';
 import { toast } from 'solid-sonner';
 import { type Folder, type Project } from '~/api/client';
+import { limitRefusalMessage } from '~/api/limits';
 import { usePermissions } from '~/api/permissions';
 import { useAgents } from '~/api/agents';
 import { useAgentStatusStream } from '~/api/agent-status';
@@ -36,10 +37,10 @@ import {
 } from '~/lib/sidebar-dnd';
 import { Permission } from '~/constants/permissions';
 import { Boxes } from '~/components/icons';
-import Spinner from '~/components/ui/spinner';
-import ConfirmDialog from '~/components/ui/confirm-dialog';
-import ProjectSettings from '../project-settings';
-import WorkspaceSettings from '../workspace-settings';
+import { Spinner } from '~/components/ui/spinner';
+import { ConfirmDialog } from '~/components/ui/confirm-dialog';
+import { ProjectSettings } from '../project-settings';
+import { WorkspaceSettings } from '../workspace-settings';
 import { FolderDialog } from '~/components/folder-dialog';
 import { SidebarWorkspaceGroup } from './sidebar-workspace-group';
 import { SidebarPublicGroup } from './sidebar-public-group';
@@ -185,7 +186,7 @@ export function ProjectSidebar(props: { search: string }) {
     navigate({
       to: '/projects/$projectId',
       params: { projectId },
-      search: { prompt: undefined },
+      search: { prompt: undefined, promptId: undefined },
     });
 
   const handleCreateInWorkspace = async (workspaceId: string, agentId?: string, folderId?: string) => {
@@ -194,8 +195,8 @@ export function ProjectSidebar(props: { search: string }) {
       if (folderId) setFolderExpanded((prev) => ({ ...prev, [folderId]: true }));
       toast.success('Project created');
       navigateToProject(project.id);
-    } catch {
-      toast.error('Failed to create project');
+    } catch (err) {
+      toast.error(limitRefusalMessage(err, 'Failed to create project'));
     }
   };
 
@@ -205,7 +206,7 @@ export function ProjectSidebar(props: { search: string }) {
         toast.success('Project created');
         navigateToProject(project.id);
       },
-      onError: () => toast.error('Failed to create project'),
+      onError: (err) => toast.error(limitRefusalMessage(err, 'Failed to create project')),
     });
 
   const handleWorkspaceReorder = (initialIndex: number, index: number) => {
@@ -402,7 +403,9 @@ export function ProjectSidebar(props: { search: string }) {
                 <Show
                   when={canManageWorkspaces()}
                   fallback={
-                    <p class="text-xs text-muted-foreground/60 mt-0.5">Ask an admin to add you to a workspace.</p>
+                    <p class="text-xs text-muted-foreground/60 mt-0.5">
+                      Projects appear here once you're added to a workspace.
+                    </p>
                   }
                 >
                   <p class="text-xs text-muted-foreground/60 mt-0.5">

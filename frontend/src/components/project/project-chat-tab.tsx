@@ -6,9 +6,9 @@ import { useGlobal } from '@opencode-ai/app/runtime/server/runtime';
 import { useSyncProjectTitle } from '~/api/projects';
 import { FileUpload } from '~/components/file-upload';
 import { DictationButton } from '~/components/dictation-button';
-import Spinner from '~/components/ui/spinner';
+import { Spinner } from '~/components/ui/spinner';
 import { WorkspaceFileLinks } from './workspace-file-links';
-import OpencodeOverrides from './opencode-overrides';
+import { OpencodeOverrides } from './opencode-overrides';
 import { createProxyPlatform } from './platform';
 
 function OpenCodeEventBridge(props: {
@@ -55,11 +55,14 @@ export function ProjectChatTab(props: ProjectChatTabProps) {
   const onTitle = (title: string) => syncTitle(props.projectId, title, props.currentTitle);
 
   let embedHost!: HTMLDivElement;
+  const host = () => embedHost;
   const [booting, setBooting] = createSignal(true);
 
   const coverBootUntilComposerPaints = () => {
     const composerPainted = () =>
-      !!embedHost.querySelector('[data-component="composer-editor"][contenteditable="true"], [contenteditable="true"], textarea');
+      !!embedHost.querySelector(
+        '[data-component="composer-editor"][contenteditable="true"], [contenteditable="true"], textarea'
+      );
     const settle = () => {
       observer.disconnect();
       clearTimeout(maxTimer);
@@ -99,23 +102,24 @@ export function ProjectChatTab(props: ProjectChatTabProps) {
         <PlatformProvider value={platform}>
           <AppBaseProviders>
             <AppInterface defaultServer={serverKey} servers={[server]} router={router}>
-              <OpencodeOverrides />
+              <OpencodeOverrides server={server} />
               <OpenCodeEventBridge server={server} onIdle={() => props.onAgentIdle()} onTitle={onTitle} />
             </AppInterface>
           </AppBaseProviders>
         </PlatformProvider>
       ),
-      embedHost,
+      embedHost
     );
 
   return (
     <div class="relative flex-1 min-h-0 flex flex-col">
       <div ref={embedHost} class="contents" />
-      <DictationButton projectId={props.projectId} environmentId={props.environmentId} />
-      <FileUpload projectId={props.projectId} environmentId={props.environmentId} />
+      <DictationButton projectId={props.projectId} environmentId={props.environmentId} host={host} />
+      <FileUpload projectId={props.projectId} environmentId={props.environmentId} host={host} />
       <WorkspaceFileLinks
         projectId={props.projectId}
         environmentId={props.environmentId}
+        host={host}
         onPreviewFile={props.onPreviewFile}
       />
       <Show when={booting()}>

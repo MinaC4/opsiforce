@@ -6,7 +6,7 @@ import { formatAgo, formatClock, formatDuration } from '~/lib/format-duration';
 import { formatCores, formatGib } from '~/lib/pod-resources';
 import { cn } from '~/lib/cn';
 import { Badge } from '~/components/ui/badge';
-import Skeleton from '~/components/ui/skeleton';
+import { Skeleton } from '~/components/ui/skeleton';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '~/components/ui/table';
 import { Tooltip, TooltipTrigger, TooltipContent } from '~/components/ui/tooltip';
 import { KeepAliveCell } from '~/components/pods/keep-alive-cell';
@@ -139,7 +139,7 @@ export function PodsPage() {
                               <Link
                                 to="/projects/$projectId"
                                 params={{ projectId: group.projectId }}
-                                search={{ prompt: undefined }}
+                                search={{ prompt: undefined, promptId: undefined }}
                                 class="inline-flex items-center justify-center w-6 h-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                                 aria-label="Open project"
                               >
@@ -203,7 +203,13 @@ function PodEnvRow(props: {
         </TableCell>
 
         <TableCell>
-          <PodStatusCell status={props.row.status} drift={props.row.drift} dbStatus={props.row.dbStatus} />
+          <PodStatusCell
+            status={props.row.status}
+            drift={props.row.drift}
+            dbStatus={props.row.dbStatus}
+            skillDelivery={props.row.skillDelivery}
+            agentUpdate={props.row.agentUpdate}
+          />
         </TableCell>
 
         <TableCell>

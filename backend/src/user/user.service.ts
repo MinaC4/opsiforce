@@ -10,6 +10,11 @@ export interface UserIdentity {
   keycloakId: string;
   email?: string;
   displayName?: string;
+  groups?: string;
+}
+
+export interface GetOrCreateUserOptions {
+  skipPrivateWorkspace?: boolean;
 }
 
 export interface UserRecord {
@@ -17,6 +22,7 @@ export interface UserRecord {
   keycloakId: string;
   email: string | null;
   displayName: string | null;
+  groups: string | null;
   lastAccessTime: Date | null;
   createdAt: Date;
   updatedAt: Date;
@@ -41,40 +47,55 @@ export class UserService {
     private readonly workspaceService: WorkspaceService
   ) {}
 
-  async getOrCreateUser(identity: UserIdentity, tenantId?: string): Promise<UserRecord> {
+  async getOrCreateUser(
+    identity: UserIdentity,
+    tenantId?: string,
+    options: GetOrCreateUserOptions = {}
+  ): Promise<UserRecord> {
     const cacheKey = tenantId ? `${identity.keycloakId}:${tenantId}` : identity.keycloakId;
     const pending = this.pendingUsers.get(cacheKey);
     if (pending) return pending;
 
-    const promise = this.doGetOrCreateUser(identity, tenantId).finally(() => this.pendingUsers.delete(cacheKey));
+    const promise = this.doGetOrCreateUser(identity, tenantId, options).finally(() =>
+      this.pendingUsers.delete(cacheKey)
+    );
     this.pendingUsers.set(cacheKey, promise);
     return promise;
   }
 
-  private async doGetOrCreateUser(identity: UserIdentity, tenantId?: string): Promise<UserRecord> {
+  private async doGetOrCreateUser(
+    identity: UserIdentity,
+    tenantId?: string,
+    options: GetOrCreateUserOptions = {}
+  ): Promise<UserRecord> {
     const [existing] = await db.select().from(users).where(eq(users.keycloakId, identity.keycloakId));
 
     if (existing) {
-      const newEmail = identity.email ?? null;
-      const newDisplayName = identity.displayName ?? null;
-      const profileChanged = existing.email !== newEmail || existing.displayName !== newDisplayName;
+      const newEmail = identity.email ?? existing.email;
+      const newDisplayName = identity.displayName ?? existing.displayName;
+      const newGroups = identity.groups ?? existing.groups;
+      const profileChanged =
+        existing.email !== newEmail || existing.displayName !== newDisplayName || existing.groups !== newGroups;
       const now = new Date();
       await db
         .update(users)
         .set(
           profileChanged
-            ? { email: newEmail, displayName: newDisplayName, lastAccessTime: now, updatedAt: now }
+            ? { email: newEmail, displayName: newDisplayName, groups: newGroups, lastAccessTime: now, updatedAt: now }
             : { lastAccessTime: now }
         )
         .where(eq(users.keycloakId, identity.keycloakId));
       if (tenantId) {
         await this.ensureUserTenant(existing.id, tenantId);
-        await this.workspaceService.ensurePrivateWorkspace(existing.id, tenantId);
+        if (!options.skipPrivateWorkspace) {
+          await this.workspaceService.ensurePrivateWorkspace(existing.id, tenantId);
+        }
       }
       return {
         ...existing,
         email: newEmail ?? existing.email,
         displayName: newDisplayName ?? existing.displayName,
+        groups: newGroups ?? existing.groups,
         lastAccessTime: now,
       };
     }
@@ -86,6 +107,7 @@ export class UserService {
         keycloakId: identity.keycloakId,
         email: identity.email ?? null,
         displayName: identity.displayName ?? null,
+        groups: identity.groups ?? null,
         lastAccessTime: new Date(),
       })
       .onConflictDoNothing()
@@ -95,7 +117,9 @@ export class UserService {
 
     if (tenantId) {
       await this.ensureUserTenant(user.id, tenantId);
-      await this.workspaceService.ensurePrivateWorkspace(user.id, tenantId);
+      if (!options.skipPrivateWorkspace) {
+        await this.workspaceService.ensurePrivateWorkspace(user.id, tenantId);
+      }
     }
 
     if (created) this.logger.log(`Created user ${user.email ?? user.keycloakId}`);
@@ -108,6 +132,7 @@ export class UserService {
         keycloakId: user.userId,
         email: user.email ?? undefined,
         displayName: user.displayName ?? undefined,
+        groups: user.groups,
       },
       tenantId
     );
@@ -132,6 +157,11 @@ export class UserService {
     const [row] = await db.select().from(users).where(eq(users.id, id));
     if (!row) throw new NotFoundException(`User ${id} not found`);
     return row;
+  }
+
+  async findByIdOrNull(id: string): Promise<UserRecord | null> {
+    const [row] = await db.select().from(users).where(eq(users.id, id));
+    return row ?? null;
   }
 
   async findByKeycloakId(keycloakId: string): Promise<UserRecord | null> {

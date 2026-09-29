@@ -1,13 +1,12 @@
 import { Injectable, CanActivate, ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { FastifyRequest } from 'fastify';
-import { GatewayKeyService, type GatewayIdentity } from './gateway-key.service';
+import { GatewayKeyService, type GatewayRequest } from './gateway-key.service';
 
 @Injectable()
 export class GatewayAuthGuard implements CanActivate {
   constructor(private readonly gatewayKeyService: GatewayKeyService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest<FastifyRequest & { gatewayContext?: GatewayIdentity }>();
+    const request = context.switchToHttp().getRequest<GatewayRequest>();
 
     const authHeader = request.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
@@ -15,7 +14,7 @@ export class GatewayAuthGuard implements CanActivate {
     }
 
     const token = authHeader.slice(7);
-    const identity = await this.gatewayKeyService.validateToken(token);
+    const identity = await this.gatewayKeyService.validateToken(token, 'service');
     if (!identity) {
       throw new UnauthorizedException('Invalid gateway token');
     }
