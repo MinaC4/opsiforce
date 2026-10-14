@@ -1,9 +1,11 @@
 import { Show, createEffect, createSignal, on } from 'solid-js';
 import { Spinner } from '~/components/ui/spinner';
+import { appHttpsPortSuffix } from '~/lib/app-url';
 
 export function ProjectCodeTab(props: { environmentId: string }) {
   const [loading, setLoading] = createSignal(true);
-  const url = () => `https://${props.environmentId}.${import.meta.env.VITE_VSCODE_DOMAIN}/?folder=/workspace`;
+  const url = () =>
+    `https://${props.environmentId}.${import.meta.env.VITE_VSCODE_DOMAIN}${appHttpsPortSuffix()}/?folder=/workspace`;
 
   createEffect(
     on(

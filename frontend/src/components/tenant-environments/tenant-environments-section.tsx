@@ -145,6 +145,9 @@ export function TenantEnvironmentsSection(props: { active: boolean }) {
                   App URLs will look like{' '}
                   <span class="font-mono">
                     {'<app-id>'}-{slug()}.{import.meta.env.VITE_WEBAPP_DOMAIN}
+                    {import.meta.env.VITE_HTTPS_PORT && import.meta.env.VITE_HTTPS_PORT !== '443'
+                      ? `:${import.meta.env.VITE_HTTPS_PORT}`
+                      : ''}
                   </span>
                 </p>
               </Show>

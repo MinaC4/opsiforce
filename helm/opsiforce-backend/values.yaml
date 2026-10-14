@@ -63,6 +63,7 @@ config:
   managedOidcClientId: ""
   managedOidcClientSecret: ""
   managedOidcIssuerUrl: ""
+  externalHttpsPort: ""
   managedTenantRolePrefix: ""
   ssoGroupMap: ""
   defaultTenantName: ""

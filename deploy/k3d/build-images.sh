@@ -11,6 +11,7 @@ node .yarn/releases/yarn-4.17.0.cjs install
 VITE_WEBAPP_DOMAIN=apps.192.168.1.3.nip.io \
 VITE_VSCODE_DOMAIN=code.192.168.1.3.nip.io \
 VITE_DB_DOMAIN=db.192.168.1.3.nip.io \
+VITE_HTTPS_PORT=18443 \
   node .yarn/releases/yarn-4.17.0.cjs workspace @opsiforce/frontend build
 node .yarn/releases/yarn-4.17.0.cjs workspace @opsiforce/backend build
 node .yarn/releases/yarn-4.17.0.cjs workspace @opsiforce/backend db:generate

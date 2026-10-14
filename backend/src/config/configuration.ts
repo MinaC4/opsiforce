@@ -120,6 +120,7 @@ export const configuration = () => {
     externalServicesWebhookBaseUrl: process.env.EXTERNAL_SERVICES_WEBHOOK_BASE_URL || '',
     externalServicesEncryptionKey: process.env.EXTERNAL_SERVICES_ENCRYPTION_KEY || '',
     appsHostname: process.env.APPS_HOSTNAME || 'apps.opsiforce.localtest.me',
+    externalHttpsPort: parseInt(process.env.EXTERNAL_HTTPS_PORT || '443', 10),
     webappServiceName: process.env.WEBAPP_SERVICE_NAME || 'proxy-app',
     webappServicePort: parseInt(process.env.WEBAPP_SERVICE_PORT || '3002', 10),
     oidcPluginSecret: process.env.OIDC_PLUGIN_SECRET || '',

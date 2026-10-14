@@ -157,7 +157,7 @@ if ! kubectl get secret opsiforce-bifrost-provider-keys -n "$namespace" >/dev/nu
 fi
 
 cat > "$credentials_path" <<EOF
-Opsiforce URL: https://opsiforce.192.168.1.3.nip.io
+Opsiforce URL: https://opsiforce.192.168.1.3.nip.io:18443
 Opsiforce username: opsiforce-admin
 Opsiforce password: ${admin_user_password}
 Keycloak admin username: admin

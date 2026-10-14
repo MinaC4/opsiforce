@@ -78,6 +78,7 @@ export class ProjectAuthService {
   private readonly customApi: k8s.CustomObjectsApi;
   private readonly namespace: string;
   private readonly appsHostname: string;
+  private readonly externalHttpsPort: number;
   private readonly webappServiceName: string;
   private readonly webappServicePort: number;
   private readonly pluginSecret: string;
@@ -91,6 +92,7 @@ export class ProjectAuthService {
     this.customApi = kc.makeApiClient(k8s.CustomObjectsApi);
     this.namespace = this.configService.getOrThrow<string>('k8sNamespace');
     this.appsHostname = this.configService.getOrThrow<string>('appsHostname');
+    this.externalHttpsPort = this.configService.getOrThrow<number>('externalHttpsPort');
     this.webappServiceName = this.configService.getOrThrow<string>('webappServiceName');
     this.webappServicePort = this.configService.getOrThrow<number>('webappServicePort');
     this.pluginSecret = this.configService.getOrThrow<string>('oidcPluginSecret');
@@ -111,7 +113,8 @@ export class ProjectAuthService {
   }
 
   callbackUrls(routingId: string, slug: EnvironmentSlug): string[] {
-    return this.projectHosts(routingId, slug).map((host) => `https://${host}${OIDC_CALLBACK_PATH}`);
+    const port = this.externalHttpsPort === 443 ? '' : `:${this.externalHttpsPort}`;
+    return this.projectHosts(routingId, slug).map((host) => `https://${host}${port}${OIDC_CALLBACK_PATH}`);
   }
 
   private buildMiddleware(routingId: string, config: ProjectAuthOidcConfig, extras: MiddlewareExtras = {}) {

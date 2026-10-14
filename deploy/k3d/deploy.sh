@@ -82,10 +82,9 @@ sh deploy/k3d/apply-gateway.sh
   --namespace "$namespace" -f helm/opsiforce-proxy/values.k3d.yaml \
   --wait --timeout=10m
 
-docker compose -f deploy/k3d/lan-gateway-forwarder/compose.yaml up -d --build
 sh deploy/k3d/install-docker-launch-agent.sh
 kubectl wait -n openchoreo-control-plane --for=condition=Programmed gateway/gateway-default --timeout=5m
 sh deploy/k3d/export-ca.sh
 
 echo 'Opsiforce LAN deployment is ready.'
-echo 'Open https://opsiforce.192.168.1.3.nip.io from a device on the home network.'
+echo 'Open https://opsiforce.192.168.1.3.nip.io:18443 from a device on the home network.'

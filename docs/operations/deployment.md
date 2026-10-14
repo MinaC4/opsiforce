@@ -29,14 +29,14 @@ checks each platform request and forwards its role claims to the backend.
 
 Reserve `192.168.1.3` for the cluster host in the router. The site URLs are:
 
-- `https://opsiforce.192.168.1.3.nip.io`
-- `https://bifrost.192.168.1.3.nip.io`
-- `https://sso.192.168.1.3.nip.io`
+- `https://opsiforce.192.168.1.3.nip.io:18443`
+- `https://bifrost.192.168.1.3.nip.io:18443`
+- `https://sso.192.168.1.3.nip.io:18443`
 
-The Gateway already owns host ports `18080` and `18443`. The two forwarder
-containers map standard ports `80` and `443` to those listeners. On each client
-device, import the public certificate authority from the cluster as a trusted
-root to remove browser certificate warnings. Never copy the CA private key.
+The existing Gateway exposes HTTP on host port `18080` and HTTPS on `18443`,
+matching the other projects on this cluster. On each client device, import the
+public certificate authority from the cluster as a trusted root to remove
+browser certificate warnings. Never copy the CA private key.
 
 ## Storage, resources and restart behavior
 
@@ -55,8 +55,7 @@ environments concurrently.
 The project volumes live inside the retained k3d node container. They survive
 host power-off and Docker restarts while that container and Docker Desktop data
 disk are kept. The deployment installs a per-user LaunchAgent to start Docker
-Desktop when that user signs in; Docker's `unless-stopped` policies resume the
-k3d containers and LAN forwarders. Do not delete/recreate the cluster to restart
+Desktop when that user signs in. Do not delete/recreate the cluster to restart
 the computer. This is restart persistence, not an off-host backup.
 
 ## Verify

@@ -14,16 +14,10 @@ The claim and database data survive a host restart as long as the k3d node
 container and Docker Desktop data disk are retained. Do not delete/recreate the
 cluster to restart the computer; Docker restarts the existing node container.
 
-The Kubernetes Gateway already listens on host ports `18080` and `18443`. The
-forwarder in this directory maps the normal LAN ports `80` and `443` to those
-listeners. Start it once with:
+The Kubernetes Gateway already listens on host ports `18080` and `18443`.
+Use `:18443` in HTTPS links, matching existing cluster applications.
 
-```sh
-docker compose -f deploy/k3d/lan-gateway-forwarder/compose.yaml up -d --build
-```
-
-Both forwarder containers use Docker's `unless-stopped` restart policy. The
-deployment installs a per-user macOS LaunchAgent that starts Docker Desktop
+The deployment installs a per-user macOS LaunchAgent that starts Docker Desktop
 when that user signs in; the existing k3d node container and workloads then
 resume. On each client device, install the public LAN CA certificate as a
 trusted root to use HTTPS without browser warnings. Keep the CA private key
@@ -31,9 +25,10 @@ and all Kubernetes Secrets out of this repository.
 
 The app URLs are:
 
-- `https://opsiforce.192.168.1.3.nip.io`
-- `https://bifrost.192.168.1.3.nip.io`
-- `https://sso.192.168.1.3.nip.io`
+- `https://opsiforce.192.168.1.3.nip.io:18443`
+- `https://bifrost.192.168.1.3.nip.io:18443`
+- `https://sso.192.168.1.3.nip.io:18443`
 
-App environments use the `apps`, `code`, and `db` subdomains of
-`192.168.1.3.nip.io`.
+Use the existing Gateway host ports: HTTP `18080` and HTTPS `18443`, matching
+the other LAN projects. App environments use the `apps`, `code`, and `db`
+subdomains of `192.168.1.3.nip.io` on HTTPS port `18443`.

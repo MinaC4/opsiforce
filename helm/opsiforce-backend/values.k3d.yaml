@@ -45,5 +45,6 @@ config:
   oidcPluginSecret: ""
   managedOidcClientId: opsiforce-apps
   managedOidcClientSecret: ""
-  managedOidcIssuerUrl: https://sso.192.168.1.3.nip.io/realms/opsiforce
+  managedOidcIssuerUrl: https://sso.192.168.1.3.nip.io:18443/realms/opsiforce
+  externalHttpsPort: "18443"
   managedTenantRolePrefix: opsiforce_tenant_name_

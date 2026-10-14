@@ -5,8 +5,13 @@ export function appHostLabel(environmentId: string, slug: string | null | undefi
   return slug ? `${environmentId}-${slug}` : environmentId;
 }
 
+export function appHttpsPortSuffix(): string {
+  const port = import.meta.env.VITE_HTTPS_PORT;
+  return port && port !== '443' ? `:${port}` : '';
+}
+
 export function appPublicUrl(environmentId: string, slug: string | null | undefined): string {
-  return `https://${appHostLabel(environmentId, slug)}.${import.meta.env.VITE_WEBAPP_DOMAIN}/`;
+  return `https://${appHostLabel(environmentId, slug)}.${import.meta.env.VITE_WEBAPP_DOMAIN}${appHttpsPortSuffix()}/`;
 }
 
 export function slugifyEnvironmentName(name: string): string {

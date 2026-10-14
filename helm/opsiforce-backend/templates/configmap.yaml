@@ -93,6 +93,9 @@ data:
   {{- if .Values.config.managedOidcIssuerUrl }}
   MANAGED_OIDC_ISSUER_URL: {{ .Values.config.managedOidcIssuerUrl | quote }}
   {{- end }}
+  {{- if .Values.config.externalHttpsPort }}
+  EXTERNAL_HTTPS_PORT: {{ .Values.config.externalHttpsPort | quote }}
+  {{- end }}
   {{- if .Values.config.managedTenantRolePrefix }}
   MANAGED_TENANT_ROLE_PREFIX: {{ .Values.config.managedTenantRolePrefix | quote }}
   {{- end }}
