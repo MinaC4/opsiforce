@@ -1,0 +1,125 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opsiforce-postgres-init
+  namespace: opsiforce
+data:
+  00-create-databases.sh: |
+    #!/bin/sh
+    set -eu
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<EOSQL
+    CREATE USER opsiforce WITH PASSWORD '${OPSIFORCE_DB_PASSWORD}';
+    CREATE DATABASE opsiforce OWNER opsiforce;
+    CREATE USER bifrost WITH PASSWORD '${BIFROST_DB_PASSWORD}';
+    CREATE DATABASE bifrost OWNER bifrost;
+    CREATE USER keycloak WITH PASSWORD '${KEYCLOAK_DB_PASSWORD}';
+    CREATE DATABASE keycloak OWNER keycloak;
+    EOSQL
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: opsiforce-postgres-data
+  namespace: opsiforce
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opsiforce-postgres
+  namespace: opsiforce
+spec:
+  type: ClusterIP
+  selector:
+    app: opsiforce-postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: opsiforce-postgres
+  namespace: opsiforce
+spec:
+  serviceName: opsiforce-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opsiforce-postgres
+  template:
+    metadata:
+      labels:
+        app: opsiforce-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16.10-alpine
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_DB
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-postgres-credentials
+                  key: postgres-password
+            - name: OPSIFORCE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-postgres-credentials
+                  key: opsiforce-password
+            - name: BIFROST_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-postgres-credentials
+                  key: bifrost-password
+            - name: KEYCLOAK_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-postgres-credentials
+                  key: keycloak-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          resources:
+            requests:
+              cpu: 200m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            exec:
+              command: ["sh", "-ec", "pg_isready -U postgres -d postgres"]
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["sh", "-ec", "pg_isready -U postgres -d postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: opsiforce-postgres-data
+        - name: init
+          configMap:
+            name: opsiforce-postgres-init
+            defaultMode: 0555

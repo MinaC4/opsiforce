@@ -1,0 +1,24 @@
+# Single-node k3d profile. local-path volumes survive host reboots while the
+# k3d node container is retained; RWO is sufficient because all workloads run
+# on the same Kubernetes node.
+fullnameOverride: opsiforce
+
+storage:
+  type: pvc
+  pvcName: opsiforce-cephfs
+  className: local-path
+  accessModes:
+    - ReadWriteOnce
+  size: 50Gi
+
+valkey:
+  dataStorage:
+    enabled: true
+    requestedSize: 1Gi
+    className: local-path
+    keepPvc: true
+  affinity: {}
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi

@@ -36,7 +36,8 @@ RUN pip3 install --no-cache-dir --break-system-packages \
     requests Pillow datasette==1.0a28 datasette-write-ui==0.0.1a14 \
     openpyxl==3.1.5 reportlab==5.0.1 pypdf==6.16.1
 
-RUN npm install -g bun @opencode-ai/cli@0.0.0-beta-19059 agent-browser
+RUN npm install -g --allow-scripts=@opencode-ai/cli,bun,agent-browser \
+    bun @opencode-ai/cli@0.0.0-beta-19059 agent-browser
 
 RUN mkdir -p /opt/doc-tools \
     && npm install --prefix /opt/doc-tools --no-audit --no-fund \

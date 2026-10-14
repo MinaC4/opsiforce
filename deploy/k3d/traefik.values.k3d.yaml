@@ -1,0 +1,46 @@
+service:
+  type: ClusterIP
+
+ports:
+  web:
+    port: 8000
+    exposedPort: 80
+    protocol: TCP
+    http:
+      redirections:
+        entryPoint:
+          to: websecure
+          scheme: https
+  websecure:
+    port: 8443
+    exposedPort: 443
+    protocol: TCP
+    # HTTPS is terminated by the existing kgateway listener. Traefik receives
+    # plain HTTP inside the cluster on this entry point.
+    http:
+      tls:
+        enabled: false
+
+deployment:
+  replicas: 1
+  additionalVolumes:
+    - name: opsiforce-lan-ca
+      configMap:
+        name: opsiforce-lan-ca
+
+additionalVolumeMounts:
+  - name: opsiforce-lan-ca
+    mountPath: /etc/opsiforce-ca
+    readOnly: true
+
+env:
+  - name: SSL_CERT_FILE
+    value: /etc/opsiforce-ca/ca.crt
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 256Mi
+  limits:
+    cpu: "1"
+    memory: 768Mi

@@ -1,0 +1,37 @@
+image:
+  repository: opsiforce-runtime-proxy
+  tag: k3d
+  pullPolicy: Never
+
+imagePullSecrets: []
+affinity: {}
+serviceAccount:
+  name: proxy
+
+fullnameOverride: proxy
+
+config:
+  backendUrl: http://opsiforce-backend:3001
+  k8sNamespace: opsiforce
+  storageType: cephfs
+  cephfsPvcName: opsiforce-cephfs
+  storageMountPath: /workspace-data
+  runtimeSecretsName: opsiforce-runtime-secrets
+
+resources:
+  agent:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  app:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+  vscode:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  db:
+    requests:
+      cpu: 50m
+      memory: 64Mi

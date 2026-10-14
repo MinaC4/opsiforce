@@ -17,6 +17,9 @@ serviceAccountName: ""
 
 config:
   databaseUrl: ""
+  databaseUrlSecretName: ""
+  databaseUrlSecretKey: "DATABASE_URL"
+  runtimeSecretsName: ""
   redisUrl: ""
   k8sNamespace: ""
   poolSizeOverride: ""
@@ -37,6 +40,7 @@ config:
   openaiApiKey: ""
   gotenbergUrl: ""
   bifrostProxyUrl: ""
+  bifrostUseOpenrouter: "false"
   bifrostPodProxyUrl: ""
   bifrostAdminUsername: ""
   bifrostAdminPassword: ""

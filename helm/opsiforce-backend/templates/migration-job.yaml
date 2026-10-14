@@ -31,7 +31,14 @@ spec:
           command: ["yarn", "run", "db:migrate"]
           env:
             - name: DATABASE_URL
+              {{- if .Values.config.databaseUrlSecretName }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.databaseUrlSecretName }}
+                  key: {{ .Values.config.databaseUrlSecretKey | default "DATABASE_URL" }}
+              {{- else }}
               value: {{ .Values.config.databaseUrl | quote }}
+              {{- end }}
       restartPolicy: Never
 
 {{- end }}

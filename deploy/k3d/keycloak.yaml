@@ -1,0 +1,136 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opsiforce-keycloak
+  namespace: opsiforce
+  labels:
+    app: opsiforce-keycloak
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: opsiforce-keycloak
+  template:
+    metadata:
+      labels:
+        app: opsiforce-keycloak
+    spec:
+      initContainers:
+        - name: render-realm-import
+          image: alpine:3.22
+          command: ["/bin/sh", "-ec"]
+          args:
+            - >-
+              sed
+              -e "s/__PLATFORM_CLIENT_SECRET__/${PLATFORM_CLIENT_SECRET}/g"
+              -e "s/__MANAGED_CLIENT_SECRET__/${MANAGED_CLIENT_SECRET}/g"
+              -e "s/__ADMIN_USER_PASSWORD__/${ADMIN_USER_PASSWORD}/g"
+              /template/realm.json.tmpl > /import/realm.json
+          env:
+            - name: PLATFORM_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-keycloak-credentials
+                  key: platform-client-secret
+            - name: MANAGED_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-keycloak-credentials
+                  key: managed-client-secret
+            - name: ADMIN_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-keycloak-credentials
+                  key: admin-user-password
+          volumeMounts:
+            - name: realm-template
+              mountPath: /template
+              readOnly: true
+            - name: realm-import
+              mountPath: /import
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.4.2
+          imagePullPolicy: IfNotPresent
+          args: ["start", "--import-realm"]
+          env:
+            - name: KC_DB
+              value: postgres
+            - name: KC_DB_URL
+              value: jdbc:postgresql://opsiforce-postgres:5432/keycloak
+            - name: KC_DB_USERNAME
+              value: keycloak
+            - name: KC_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-postgres-credentials
+                  key: keycloak-password
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            - name: KC_PROXY_HEADERS
+              value: xforwarded
+            - name: KC_HOSTNAME
+              value: https://sso.192.168.1.3.nip.io
+            - name: KC_HEALTH_ENABLED
+              value: "true"
+            - name: KC_BOOTSTRAP_ADMIN_USERNAME
+              value: admin
+            - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: opsiforce-keycloak-credentials
+                  key: bootstrap-admin-password
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: management
+              containerPort: 9000
+          startupProbe:
+            httpGet:
+              path: /health/started
+              port: management
+            failureThreshold: 60
+            periodSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: management
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: management
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 300m
+              memory: 768Mi
+            limits:
+              cpu: "1"
+              memory: 1536Mi
+          volumeMounts:
+            - name: realm-import
+              mountPath: /opt/keycloak/data/import
+              readOnly: true
+      volumes:
+        - name: realm-template
+          configMap:
+            name: opsiforce-keycloak-realm-template
+        - name: realm-import
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opsiforce-keycloak
+  namespace: opsiforce
+spec:
+  type: ClusterIP
+  selector:
+    app: opsiforce-keycloak
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

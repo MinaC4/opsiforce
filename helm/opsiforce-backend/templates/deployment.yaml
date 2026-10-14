@@ -40,6 +40,18 @@ spec:
                 name: {{ include "opsiforce-backend.fullname" . }}-config
             - secretRef:
                 name: {{ include "opsiforce-backend.fullname" . }}-secret
+            {{- if .Values.config.runtimeSecretsName }}
+            - secretRef:
+                name: {{ .Values.config.runtimeSecretsName }}
+            {{- end }}
+          {{- if .Values.config.databaseUrlSecretName }}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.databaseUrlSecretName }}
+                  key: {{ .Values.config.databaseUrlSecretKey | default "DATABASE_URL" }}
+          {{- end }}
           volumeMounts:
             - name: workspace-data
               mountPath: {{ .Values.config.storageMountPath | default "/workspace-data" }}

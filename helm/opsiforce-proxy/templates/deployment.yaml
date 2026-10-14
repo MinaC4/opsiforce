@@ -37,6 +37,11 @@ spec:
               secret:
                 secretName: {{ .Values.oauth2Proxy.credentialsSecret }}
             {{- end }}
+            {{- if .Values.oauth2Proxy.trustedCaConfigMap }}
+            - name: trusted-ca
+              configMap:
+                name: {{ .Values.oauth2Proxy.trustedCaConfigMap }}
+            {{- end }}
           containers:
           - name: {{ .Chart.Name }}
             image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
@@ -82,12 +87,37 @@ spec:
                   command: [ sh, -c, "sleep 30" ]
             resources:
               {{- toYaml .Values.resources | nindent 18 }}
+            {{- if .Values.oauth2Proxy.credentialsSecret }}
+            env:
+              - name: OAUTH2_PROXY_COOKIE_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Values.oauth2Proxy.credentialsSecret }}
+                    key: cookie-secret
+              - name: OAUTH2_PROXY_CLIENT_SECRET
+                valueFrom:
+                  secretKeyRef:
+                    name: {{ .Values.oauth2Proxy.credentialsSecret }}
+                    key: client-secret
+              {{- if .Values.oauth2Proxy.trustedCaConfigMap }}
+              - name: SSL_CERT_FILE
+                value: /etc/opsiforce-ca/ca.crt
+              {{- end }}
+            {{- else if .Values.oauth2Proxy.trustedCaConfigMap }}
+            env:
+              - name: SSL_CERT_FILE
+                value: /etc/opsiforce-ca/ca.crt
+            {{- end }}
             args:
                 - --provider={{ .Values.oauth2Proxy.provider | default "keycloak-oidc" }}
                 - --http-address=0.0.0.0:4180
                 - --upstream="http://localhost:{{ .Values.service.port }}/"
                 - --client-id={{ .Values.oauth2Proxy.clientId }}
+                {{- if .Values.oauth2Proxy.credentialsSecret }}
+                - --cookie-secret=$(OAUTH2_PROXY_COOKIE_SECRET)
+                {{- else }}
                 - --cookie-secret={{ .Values.oauth2Proxy.cookieSecret }}
+                {{- end }}
                 - --cookie-domain={{ .Values.oauth2Proxy.cookieDomain }}
                 - --cookie-name={{ .Values.oauth2Proxy.cookieName }}
                 - --session-store-type=redis
@@ -96,12 +126,16 @@ spec:
                 - --email-domain=*
                 - --oidc-email-claim={{ .Values.oauth2Proxy.emailClaim | default "preferred_username" }}
                 - --pass-access-token=true
+                {{- if .Values.oauth2Proxy.credentialsSecret }}
+                - --client-secret=$(OAUTH2_PROXY_CLIENT_SECRET)
+                {{- else }}
                 - --client-secret={{ .Values.oauth2Proxy.clientSecret }}
+                {{- end }}
                 - --oidc-issuer-url={{ .Values.oauth2Proxy.issuerUrl }}
                 {{- if .Values.oauth2Proxy.logoutUrl }}
                 - --backend-logout-url={{ .Values.oauth2Proxy.logoutUrl }}
                 {{- end }}
-                - --cookie-secure=false
+                - --cookie-secure={{ .Values.oauth2Proxy.cookieSecure | default true }}
                 - --skip-jwt-bearer-tokens=true
                 - --cookie-csrf-per-request=true
                 - --redirect-url={{ .Values.oauth2Proxy.redirectUrl }}
@@ -124,6 +158,16 @@ spec:
             volumeMounts:
               - name: auth-credentials
                 mountPath: /secrets
+                readOnly: true
+              {{- if .Values.oauth2Proxy.trustedCaConfigMap }}
+              - name: trusted-ca
+                mountPath: /etc/opsiforce-ca
+                readOnly: true
+              {{- end }}
+            {{- else if .Values.oauth2Proxy.trustedCaConfigMap }}
+            volumeMounts:
+              - name: trusted-ca
+                mountPath: /etc/opsiforce-ca
                 readOnly: true
             {{- end }}
           {{- end }}

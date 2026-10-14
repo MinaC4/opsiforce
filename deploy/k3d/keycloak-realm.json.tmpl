@@ -1,0 +1,151 @@
+{
+  "realm": "opsiforce",
+  "enabled": true,
+  "displayName": "Opsiforce",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": false,
+  "roles": {
+    "realm": [
+      {"name":"role:opsiforce_can_manage_project_budget_settings"},
+      {"name":"role:opsiforce_can_manage_project_timeout_settings"},
+      {"name":"role:opsiforce_can_manage_project_logging_settings"},
+      {"name":"role:opsiforce_can_manage_project_auth_settings"},
+      {"name":"role:opsiforce_can_manage_project_pod_settings"},
+      {"name":"role:opsiforce_can_manage_tenant_budget"},
+      {"name":"role:opsiforce_can_manage_platform_defaults"},
+      {"name":"role:opsiforce_can_manage_tenant_defaults"},
+      {"name":"role:opsiforce_can_view_code_tab"},
+      {"name":"role:opsiforce_can_view_db_tab"},
+      {"name":"role:opsiforce_can_disable_project"},
+      {"name":"role:opsiforce_can_restart_project"},
+      {"name":"role:opsiforce_can_duplicate_project"},
+      {"name":"role:opsiforce_can_delete_project"},
+      {"name":"role:opsiforce_can_export_project"},
+      {"name":"role:opsiforce_can_import_project"},
+      {"name":"role:opsiforce_can_manage_workspaces"},
+      {"name":"role:opsiforce_can_move_projects_between_workspaces"},
+      {"name":"role:opsiforce_can_edit_app_details"},
+      {"name":"role:opsiforce_can_manage_environments"},
+      {"name":"role:opsiforce_can_manage_environment_variables"},
+      {"name":"role:opsiforce_can_publish_project"},
+      {"name":"role:opsiforce_can_delete_environment"},
+      {"name":"role:opsiforce_can_manage_users"},
+      {"name":"role:opsiforce_can_manage_schedules"},
+      {"name":"role:opsiforce_can_view_pods"},
+      {"name":"role:opsiforce_can_manage_external_integration"},
+      {"name":"role:opsiforce_can_view_external_services_usage"},
+      {"name":"role:opsiforce_can_manage_external_services"},
+      {"name":"role:opsiforce_can_view_platform_storage"},
+      {"name":"role:opsiforce_can_manage_platform_storage"},
+      {"name":"role:opsiforce_can_manage_platform_limits"},
+      {"name":"role:opsiforce_can_use_public_api"},
+      {"name":"role:opsiforce_can_manage_skills"},
+      {"name":"role:opsiforce_can_manage_agents"},
+      {"name":"opsiforce_tenant_name_default"},
+      {"name":"role:opsiforce_tenant_name_default"}
+    ]
+  },
+  "clientScopes": [
+    {
+      "name": "opsiforce-role-groups",
+      "description": "Expose realm roles as the groups claim for the platform auth proxy",
+      "protocol": "openid-connect",
+      "attributes": {"include.in.token.scope": "true", "display.on.consent.screen": "false"},
+      "protocolMappers": [
+        {
+          "name": "realm roles as groups",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "consentRequired": false,
+          "config": {
+            "multivalued": "true",
+            "user.attribute": "foo",
+            "claim.name": "groups",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "opsiforce-platform",
+      "name": "Opsiforce platform login",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "__PLATFORM_CLIENT_SECRET__",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["https://opsiforce.192.168.1.3.nip.io/oauth2/callback"],
+      "webOrigins": ["https://opsiforce.192.168.1.3.nip.io"],
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["web-origins", "acr", "roles", "profile", "email", "opsiforce-role-groups"],
+      "attributes": {"post.logout.redirect.uris":"https://opsiforce.192.168.1.3.nip.io/*"}
+    },
+    {
+      "clientId": "opsiforce-apps",
+      "name": "Opsiforce managed app authentication",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "__MANAGED_CLIENT_SECRET__",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "redirectUris": ["https://*.apps.192.168.1.3.nip.io/*", "https://*.code.192.168.1.3.nip.io/*", "https://*.db.192.168.1.3.nip.io/*"],
+      "webOrigins": ["https://*.apps.192.168.1.3.nip.io", "https://*.code.192.168.1.3.nip.io", "https://*.db.192.168.1.3.nip.io"],
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "opsiforce-admin",
+      "email": "opsiforce-admin@home.lan",
+      "emailVerified": true,
+      "enabled": true,
+      "credentials": [{"type":"password","value":"__ADMIN_USER_PASSWORD__","temporary":false}],
+      "realmRoles": [
+        "role:opsiforce_can_manage_project_budget_settings",
+        "role:opsiforce_can_manage_project_timeout_settings",
+        "role:opsiforce_can_manage_project_logging_settings",
+        "role:opsiforce_can_manage_project_auth_settings",
+        "role:opsiforce_can_manage_project_pod_settings",
+        "role:opsiforce_can_manage_tenant_budget",
+        "role:opsiforce_can_manage_platform_defaults",
+        "role:opsiforce_can_manage_tenant_defaults",
+        "role:opsiforce_can_view_code_tab",
+        "role:opsiforce_can_view_db_tab",
+        "role:opsiforce_can_disable_project",
+        "role:opsiforce_can_restart_project",
+        "role:opsiforce_can_duplicate_project",
+        "role:opsiforce_can_delete_project",
+        "role:opsiforce_can_export_project",
+        "role:opsiforce_can_import_project",
+        "role:opsiforce_can_manage_workspaces",
+        "role:opsiforce_can_move_projects_between_workspaces",
+        "role:opsiforce_can_edit_app_details",
+        "role:opsiforce_can_manage_environments",
+        "role:opsiforce_can_manage_environment_variables",
+        "role:opsiforce_can_publish_project",
+        "role:opsiforce_can_delete_environment",
+        "role:opsiforce_can_manage_users",
+        "role:opsiforce_can_manage_schedules",
+        "role:opsiforce_can_view_pods",
+        "role:opsiforce_can_manage_external_integration",
+        "role:opsiforce_can_view_external_services_usage",
+        "role:opsiforce_can_manage_external_services",
+        "role:opsiforce_can_view_platform_storage",
+        "role:opsiforce_can_manage_platform_storage",
+        "role:opsiforce_can_manage_platform_limits",
+        "role:opsiforce_can_use_public_api",
+        "role:opsiforce_can_manage_skills",
+        "role:opsiforce_can_manage_agents",
+        "opsiforce_tenant_name_default",
+        "role:opsiforce_tenant_name_default"
+      ]
+    }
+  ]
+}

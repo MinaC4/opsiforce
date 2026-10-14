@@ -3,6 +3,7 @@
 !.yarn/plugins
 .pnp.*
 /yarn.lock
+/.k3d-build/
 /*.pem
 /.env
 

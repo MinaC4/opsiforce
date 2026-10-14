@@ -15,6 +15,13 @@
 agent-config/agents/**/template/**/yarn.lock
 agent-config/private/agents/**/template/**/yarn.lock
 
+!frontend/dist/**
+!backend/dist/**
+!.pnp.cjs
+!.pnp.loader.mjs
+!.yarn/unplugged/**
+!.k3d-build/yarn-cache/**
+
 **/.env
 **/.env.local
 

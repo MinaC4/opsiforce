@@ -1,0 +1,61 @@
+imagePullSecrets: []
+affinity: {}
+
+image:
+  repository: nginx
+  pullPolicy: IfNotPresent
+
+ingressRoute:
+  enabled: true
+  # The host-local Gateway API listener forwards these LAN hosts to Traefik.
+  hostname: opsiforce.192.168.1.3.nip.io
+  traefikTarget: 192.168.1.3
+  certResolver: ""
+
+keycloakMs:
+  enabled: false
+
+auth:
+  mode: oidc
+
+oauth2Proxy:
+  image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.5
+  provider: keycloak-oidc
+  emailClaim: email
+  clientId: opsiforce-platform
+  cookieDomain: .192.168.1.3.nip.io
+  cookieName: _opsiforce_session
+  issuerUrl: https://sso.192.168.1.3.nip.io/realms/opsiforce
+  redirectUrl: https://opsiforce.192.168.1.3.nip.io/oauth2/callback
+  redisPath: redis://opsiforce-infra-valkey:6379/0
+  credentialsSecret: opsiforce-oauth2-credentials
+  cookieSecure: true
+  trustedCaConfigMap: opsiforce-lan-ca
+  extraArgs:
+    - --reverse-proxy=true
+    - --set-xauthrequest=true
+    - --oidc-groups-claim=groups
+
+proxy:
+  agentService: http://proxy-agent:3005
+  backendService: http://opsiforce-backend:3001
+  frontendService: http://opsiforce-frontend:80
+
+appProxy:
+  backendService: proxy-app
+  backendPort: "3002"
+  appsHostname: apps.192.168.1.3.nip.io
+  previewAppsHostname: ""
+
+vscodeProxy:
+  backendService: proxy-vscode
+  appsHostname: code.192.168.1.3.nip.io
+
+dbProxy:
+  backendService: proxy-db
+  appsHostname: db.192.168.1.3.nip.io
+
+bifrostDashboard:
+  enabled: true
+  serviceName: opsiforce-bifrost
+  hostname: bifrost.192.168.1.3.nip.io

@@ -5,7 +5,9 @@ metadata:
   labels:
     {{- include "opsiforce-backend.labels" . | nindent 4 }}
 data:
+  {{- if not .Values.config.databaseUrlSecretName }}
   DATABASE_URL: {{ .Values.config.databaseUrl | quote }}
+  {{- end }}
   REDIS_URL: {{ .Values.config.redisUrl | quote }}
   K8S_NAMESPACE: {{ .Values.config.k8sNamespace | quote }}
   {{- if ne (toString .Values.config.poolSizeOverride) "" }}
@@ -42,6 +44,7 @@ data:
   {{- if .Values.config.bifrostProxyUrl }}
   BIFROST_PROXY_URL: {{ .Values.config.bifrostProxyUrl | quote }}
   {{- end }}
+  BIFROST_USE_OPENROUTER: {{ .Values.config.bifrostUseOpenrouter | default "false" | quote }}
   {{- if .Values.config.bifrostPodProxyUrl }}
   BIFROST_POD_PROXY_URL: {{ .Values.config.bifrostPodProxyUrl | quote }}
   {{- end }}

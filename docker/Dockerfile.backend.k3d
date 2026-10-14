@@ -1,0 +1,45 @@
+FROM node:24.18.0-bookworm-slim AS dependencies
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ libsqlite3-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn/releases/ ./.yarn/releases/
+COPY .k3d-build/yarn-cache/ ./.yarn/berry/cache/
+COPY backend/package.json ./backend/package.json
+COPY frontend/package.json ./frontend/package.json
+COPY codex-proxy/package.json ./codex-proxy/package.json
+
+RUN node -e 'const fs=require("fs"),p=JSON.parse(fs.readFileSync("package.json","utf8"));p.dependenciesMeta={...p.dependenciesMeta,"msgpackr-extract":{built:false}};fs.writeFileSync("package.json",JSON.stringify(p,null,2)+"\n")'
+
+ENV YARN_ENABLE_GLOBAL_CACHE=false
+ENV YARN_CACHE_FOLDER=/app/.yarn/berry/cache
+ENV npm_config_build_from_source=true
+ENV npm_config_nodedir=/usr/local
+ENV YARN_ENABLE_INLINE_BUILDS=true
+RUN node .yarn/releases/yarn-4.17.0.cjs workspaces focus @opsiforce/backend --production || { find /tmp -name build.log -exec cat {} +; exit 1; }
+RUN node -e 'const fs=require("fs"),re=/\.yarn\/berry\/cache\/([^/]+\.zip)/g,text=fs.readFileSync(".pnp.cjs","utf8"),used=new Set([...text.matchAll(re)].map(m=>m[1]));for(const name of fs.readdirSync(".yarn/berry/cache"))if(name.endsWith(".zip")&&!used.has(name))fs.rmSync(".yarn/berry/cache/"+name);console.log(`Pruned dependency cache to ${used.size} production archives.`)'
+
+FROM node:24.18.0-bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends git attr \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY --from=dependencies /app/.pnp.cjs /app/.pnp.loader.mjs ./
+COPY --from=dependencies /app/.yarn/ ./.yarn/
+COPY --from=dependencies /app/package.json /app/yarn.lock /app/.yarnrc.yml ./
+COPY --from=dependencies /app/backend/package.json ./backend/package.json
+COPY --from=dependencies /app/frontend/package.json ./frontend/package.json
+COPY --from=dependencies /app/codex-proxy/package.json ./codex-proxy/package.json
+COPY backend/dist/ ./backend/dist/
+COPY backend/db/ ./backend/db/
+COPY frontend/opencode/packages/protocol/openapi.json ./frontend/opencode/packages/protocol/openapi.json
+COPY agent-config/ ./agent-config/
+
+ENV NODE_ENV=production
+ENV NODE_OPTIONS=--max-http-header-size=128000
+EXPOSE 3001
+CMD ["node", "--require", "/app/.pnp.cjs", "--experimental-loader=/app/.pnp.loader.mjs", "backend/dist/src/main.js"]

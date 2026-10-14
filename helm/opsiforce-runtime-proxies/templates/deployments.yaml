@@ -52,6 +52,10 @@ spec:
                 name: {{ include "opsiforce-runtime-proxies.fullname" $ }}-config
             - secretRef:
                 name: {{ include "opsiforce-runtime-proxies.fullname" $ }}-secret
+            {{- if $.Values.config.runtimeSecretsName }}
+            - secretRef:
+                name: {{ $.Values.config.runtimeSecretsName }}
+            {{- end }}
           ports:
             - name: http
               containerPort: {{ $proxy.port }}

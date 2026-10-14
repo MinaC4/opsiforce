@@ -8,10 +8,13 @@ namespace="${1:-local}"
 : "${BIFROST_ENCRYPTION_KEY:?BIFROST_ENCRYPTION_KEY is required}"
 : "${BIFROST_POSTGRES_PASSWORD:?BIFROST_POSTGRES_PASSWORD is required}"
 
-kubectl create secret generic opsiforce-bifrost-provider-keys \
-  --namespace "${namespace}" \
+set -- --namespace "${namespace}" \
   --from-literal=openai-api-key="${OPENAI_API_KEY:-}" \
-  --from-literal=anthropic-api-key="${ANTHROPIC_API_KEY:-}" \
+  --from-literal=anthropic-api-key="${ANTHROPIC_API_KEY:-}"
+if [ -n "${OPENROUTER_API_KEY:-}" ]; then
+  set -- "$@" --from-literal=openrouter-api-key="${OPENROUTER_API_KEY}"
+fi
+kubectl create secret generic opsiforce-bifrost-provider-keys "$@" \
   --dry-run=client \
   -o yaml | kubectl apply -f -
 

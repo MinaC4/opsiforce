@@ -7,7 +7,7 @@ metadata:
     {{- include "opsiforce.labels" . | nindent 4 }}
 spec:
   accessModes:
-    - ReadWriteMany
+    {{- toYaml (.Values.storage.accessModes | default (list "ReadWriteMany")) | nindent 4 }}
   storageClassName: {{ .Values.storage.className }}
   resources:
     requests:

@@ -1,0 +1,78 @@
+service:
+  type: ClusterIP
+
+fullnameOverride: opsiforce-bifrost
+
+image:
+  tag: "v2.0.0"
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 768Mi
+  limits:
+    cpu: "1"
+    memory: 1536Mi
+
+autoscaling:
+  enabled: false
+
+affinity: {}
+
+storage:
+  mode: postgres
+  configStore:
+    enabled: true
+  logsStore:
+    enabled: true
+
+vectorStore:
+  enabled: false
+  type: none
+
+postgresql:
+  enabled: false
+  external:
+    enabled: true
+    host: opsiforce-postgres.opsiforce.svc.cluster.local
+    port: 5432
+    user: bifrost
+    database: bifrost
+    sslMode: disable
+    existingSecret: opsiforce-bifrost-postgres
+    passwordKey: password
+
+bifrost:
+  sourceOfTruth: "config.json"
+  encryptionKeySecret:
+    name: opsiforce-bifrost-encryption
+    key: key
+  authConfig:
+    isEnabled: true
+    existingSecret: opsiforce-bifrost-admin-auth
+    usernameKey: username
+    passwordKey: password
+  client:
+    dropExcessRequests: true
+    enableLogging: true
+    logRetentionDays: 7
+    allowDirectKeys: false
+    enforceAuthOnInference: true
+  plugins:
+    governance:
+      enabled: true
+    logging:
+      enabled: true
+
+  # The API key lives only in the Kubernetes Secret consumed by values.openrouter.yaml.
+  providerSecrets:
+    openai:
+      existingSecret: opsiforce-bifrost-provider-keys
+      key: openrouter-api-key
+      envVar: OPENROUTER_API_KEY
+    anthropic:
+      existingSecret: opsiforce-bifrost-provider-keys
+      key: openrouter-api-key
+      envVar: OPENROUTER_API_KEY

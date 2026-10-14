@@ -49,6 +49,20 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 {{- end }}
 
+{{- define "opsiforce-proxy.oidcAuth" -}}
+auth_request /oauth2/auth;
+error_page 401 = @oauth2_signin;
+auth_request_set $auth_user $upstream_http_x_auth_request_user;
+auth_request_set $auth_email $upstream_http_x_auth_request_email;
+auth_request_set $auth_groups $upstream_http_x_auth_request_groups;
+auth_request_set $auth_access_token $upstream_http_x_auth_request_access_token;
+proxy_set_header X-Forwarded-User $auth_user;
+proxy_set_header X-Forwarded-Email $auth_email;
+proxy_set_header X-Forwarded-Groups $auth_groups;
+proxy_set_header X-Forwarded-Access-Token $auth_access_token;
+proxy_set_header Authorization "Bearer $auth_access_token";
+{{- end -}}
+
 {{- define "opsiforce-proxy.staticGroups" -}}
 {{- $tenant := printf "role:opsiforce_tenant_name_%s" .Values.auth.static.tenantName }}
 {{- $roles := list $tenant }}

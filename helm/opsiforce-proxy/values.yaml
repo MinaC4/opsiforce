@@ -65,6 +65,8 @@ oauth2Proxy:
   emailClaim: preferred_username
   clientId:
   cookieSecret:
+  cookieSecure: true
+  trustedCaConfigMap: ""
   cookieDomain:
   cookieName:
   clientSecret:

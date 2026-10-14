@@ -1,0 +1,13 @@
+frontend:
+  image:
+    repository: opsiforce-frontend
+    tag: k3d
+    pullPolicy: Never
+  containerPort: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+imagePullSecrets: []
+affinity: {}

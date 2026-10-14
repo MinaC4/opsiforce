@@ -1,0 +1,38 @@
+# Layer this over values.prod.yaml. Keep the API key in the referenced Secret,
+# never in this file. The aliases translate Opsiforce model IDs to OpenRouter's
+# canonical provider/model IDs while preserving Bifrost virtual-key budgets.
+bifrost:
+  providers:
+    openai:
+      network_config:
+        base_url: https://openrouter.ai/api/v1
+      keys:
+        - name: openrouter-primary
+          value: env.OPENROUTER_API_KEY
+          weight: 1
+          models: ["*"]
+          aliases:
+            gpt-5.6-sol: openai/gpt-5.6-sol
+            gpt-5.6-sol-fast: openai/gpt-5.6-sol
+            gpt-6-astra: openai/gpt-6-astra
+    anthropic:
+      network_config:
+        base_url: https://openrouter.ai/api/v1
+      keys:
+        - name: openrouter-primary
+          value: env.OPENROUTER_API_KEY
+          weight: 1
+          models: ["*"]
+          aliases:
+            claude-opus-5: anthropic/claude-opus-5
+            claude-sonnet-5: anthropic/claude-sonnet-5
+            claude-haiku-4-5: anthropic/claude-haiku-4.5
+  providerSecrets:
+    openai:
+      existingSecret: opsiforce-bifrost-provider-keys
+      key: openrouter-api-key
+      envVar: OPENROUTER_API_KEY
+    anthropic:
+      existingSecret: opsiforce-bifrost-provider-keys
+      key: openrouter-api-key
+      envVar: OPENROUTER_API_KEY
