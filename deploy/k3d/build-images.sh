@@ -4,9 +4,9 @@ set -eu
 root_dir=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$root_dir"
 
-if [ ! -f yarn.lock ]; then
-  node .yarn/releases/yarn-4.17.0.cjs install
-fi
+# The earlier production-only focus can remove Vite and other build tools from
+# the host PnP install. Restore the complete workspace before building images.
+node .yarn/releases/yarn-4.17.0.cjs install
 
 VITE_WEBAPP_DOMAIN=apps.192.168.1.3.nip.io \
 VITE_VSCODE_DOMAIN=code.192.168.1.3.nip.io \
