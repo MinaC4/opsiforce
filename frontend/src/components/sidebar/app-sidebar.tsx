@@ -1,4 +1,4 @@
-import { Show, createSignal } from 'solid-js';
+import { Show, createEffect, createSignal } from 'solid-js';
 import { toast } from 'solid-sonner';
 import { useNavigate } from '@tanstack/solid-router';
 import { useAgents } from '~/api/agents';
@@ -39,13 +39,16 @@ import {
   ChevronsUpDown,
   FolderKanban,
   LogOut,
+  Moon,
   Plus,
   Search,
   Server,
   Settings,
   Store,
+  Sun,
   X,
 } from '~/components/icons';
+import { createPersistedSignal } from '~/lib/persisted-signal';
 
 export function AppSidebar() {
   const navigate = useNavigate();
@@ -54,6 +57,11 @@ export function AppSidebar() {
   const currentUser = useCurrentUser();
   const agents = useAgents();
   const createDefaultProject = useCreateDefaultProject();
+  const [darkMode, setDarkMode] = createPersistedSignal('opsiforce:theme:dark', false);
+
+  createEffect(() => {
+    document.documentElement.classList.toggle('dark', darkMode());
+  });
 
   const [search, setSearch] = createSignal('');
   const [createWorkspaceOpen, setCreateWorkspaceOpen] = createSignal(false);
@@ -234,6 +242,13 @@ export function AppSidebar() {
                 <div class="px-2 py-1.5">
                   <p class="text-sm font-medium truncate">{userName()}</p>
                 </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onSelect={() => setDarkMode((enabled) => !enabled)}>
+                  <Show when={darkMode()} fallback={<Moon class="w-4 h-4 text-muted-foreground" />}>
+                    <Sun class="w-4 h-4 text-muted-foreground" />
+                  </Show>
+                  {darkMode() ? 'Light mode' : 'Dark mode'}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onSelect={() => navigate({ to: '/store' })}>
                   <Store class="w-4 h-4 text-muted-foreground" />

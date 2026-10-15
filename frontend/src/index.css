@@ -53,6 +53,8 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
@@ -81,6 +83,35 @@
   --sidebar-accent-foreground: 240 5.9% 10%;
   --sidebar-muted-foreground: 240 4% 44%;
   --main-left: 0px !important;
+}
+
+.dark {
+  color-scheme: dark;
+  --background: 240 10% 3.9%;
+  --foreground: 0 0% 98%;
+  --card: 240 10% 5.5%;
+  --card-foreground: 0 0% 98%;
+  --popover: 240 10% 5.5%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 240 5.9% 10%;
+  --secondary: 240 3.7% 15.9%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --accent: 240 3.7% 15.9%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 3.7% 18%;
+  --input: 240 3.7% 18%;
+  --ring: 240 4.9% 83.9%;
+  --sidebar: 240 5.9% 7%;
+  --sidebar-foreground: 0 0% 90%;
+  --sidebar-border: 240 3.7% 15.9%;
+  --sidebar-accent: 240 3.7% 15.9%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-muted-foreground: 240 5% 64.9%;
 }
 
 html,

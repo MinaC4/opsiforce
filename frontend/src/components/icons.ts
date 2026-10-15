@@ -71,6 +71,8 @@ export { default as List } from 'lucide-solid/icons/list';
 export { default as LayoutGrid } from 'lucide-solid/icons/layout-grid';
 export { default as Files } from 'lucide-solid/icons/files';
 export { default as Store } from 'lucide-solid/icons/store';
+export { default as Moon } from 'lucide-solid/icons/moon';
+export { default as Sun } from 'lucide-solid/icons/sun';
 export { default as Terminal } from 'lucide-solid/icons/terminal';
 export { default as Archive } from 'lucide-solid/icons/archive';
 export { default as ArchiveRestore } from 'lucide-solid/icons/archive-restore';
