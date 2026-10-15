@@ -93,6 +93,60 @@ export interface ModelCatalogProvider {
   models: ModelCatalogModel[];
 }
 
+export function openCodeModelCatalog(
+  models: Array<{ provider: string; name: string }>,
+  configuredProviders: Array<{ name: string; label?: string }>,
+  api: string,
+  catalog = readModelCatalog()
+): Record<string, unknown> {
+  type OpenCodeProvider = {
+    id?: string;
+    name?: string;
+    env?: string[];
+    npm?: string;
+    api?: string;
+    models: Record<string, Record<string, unknown>>;
+  };
+  const result = structuredClone(catalog) as unknown as Record<string, OpenCodeProvider>;
+  const configured = new Set(configuredProviders.map((provider) => provider.name));
+  const grouped = new Map<string, Set<string>>();
+  for (const model of models) {
+    if (!configured.has(model.provider)) continue;
+    const items = grouped.get(model.provider) ?? new Set<string>();
+    items.add(model.name);
+    grouped.set(model.provider, items);
+  }
+
+  for (const provider of configuredProviders) {
+    const modelNames = grouped.get(provider.name);
+    if (!modelNames?.size) continue;
+    const existing = result[provider.name];
+    const entry = (result[provider.name] = {
+      id: provider.name,
+      name: existing?.name ?? provider.label ?? providerName(provider.name),
+      env: existing?.env ?? ['OPENAI_API_KEY'],
+      npm: existing?.npm ?? '@ai-sdk/openai-compatible',
+      api,
+      models: { ...(existing?.models ?? {}) },
+    });
+    for (const modelName of modelNames) {
+      entry.models[modelName] = {
+        id: modelName,
+        name: modelName,
+        release_date: new Date().toISOString().slice(0, 10),
+        attachment: false,
+        reasoning: false,
+        tool_call: true,
+        limit: { context: 128000, output: 8192 },
+        modalities: { input: ['text'], output: ['text'] },
+        provider: { npm: '@ai-sdk/openai-compatible', api },
+      };
+    }
+  }
+
+  return result;
+}
+
 export function updateLiveModelCatalog(models: Array<{ provider: string; name: string }>): void {
   const next: ModelCatalog = {};
   for (const { provider, name } of models) {

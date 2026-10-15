@@ -123,6 +123,12 @@ export function buildPodSpec(options: PodTemplateOptions): k8s.V1Pod {
               : []),
             ...(options.bifrostApiKey && options.bifrostProxyUrl
               ? [
+                  {
+                    name: 'OPENCODE_MODELS_URL',
+                    value: 'http://opsiforce-backend:3001/api/agents/models-dev',
+                  },
+                  { name: 'OPENCODE_MODELS_PATH', value: '' },
+                  { name: 'OPENCODE_DISABLE_MODELS_FETCH', value: 'false' },
                   { name: 'OPENAI_API_KEY', value: options.bifrostApiKey },
                   { name: 'OPENAI_BASE_URL', value: options.bifrostProxyUrl },
                   { name: 'ANTHROPIC_API_KEY', value: options.bifrostApiKey },

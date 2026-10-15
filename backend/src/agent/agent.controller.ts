@@ -21,7 +21,7 @@ import { contentDisposition } from '../files/file-content-types';
 import { Perms } from '../permission/permission.constants';
 import { RelaxPermission, RequirePermission } from '../permission/permission.guard';
 import { getGroupsHeader, hasPermission } from '../permission/permission.utils';
-import { CurrentTenant, type TenantContext } from '../tenant/tenant.decorator';
+import { CurrentTenant, Public, type TenantContext } from '../tenant/tenant.decorator';
 import { CurrentUser, type UserContext } from '../user/user.decorator';
 import { MissingPermissionException } from '../permission/missing-permission.exception';
 import { ProjectImportUploadService } from '../project/project-import-upload.service';
@@ -96,6 +96,13 @@ export class AgentController {
       // Keep the shipped catalog available during a temporary gateway outage.
     }
     return modelCatalogResponse();
+  }
+
+  @Get('models-dev/api.json')
+  @Public()
+  @RelaxPermission()
+  async openCodeModels(): Promise<Record<string, unknown>> {
+    return this.bifrostService.openCodeModelCatalog();
   }
 
   @Get(':id')

@@ -18,6 +18,7 @@ import type {
   CreateTeamResponse,
 } from './bifrost.types';
 import { BIFROST_PROVIDER_CONFIGS } from './bifrost.providers';
+import { openCodeModelCatalog } from '../agent/agent-models';
 
 @Injectable()
 export class BifrostService {
@@ -52,6 +53,21 @@ export class BifrostService {
     return (response.models ?? []).filter(
       (model): model is { provider: string; name: string } => !!model.provider && !!model.name
     );
+  }
+
+  async openCodeModelCatalog(): Promise<Record<string, unknown>> {
+    if (!this.isEnabled()) return openCodeModelCatalog([], [], this.proxyUrl);
+    const [models, response] = await Promise.all([
+      this.listModels(),
+      this.request<{ providers?: Array<{ name: string; provider_status?: string; description?: string }> }>(
+        'GET',
+        '/api/providers'
+      ),
+    ]);
+    const providers = (response.providers ?? [])
+      .filter((provider) => provider.provider_status === 'active')
+      .map((provider) => ({ name: provider.name, label: provider.description }));
+    return openCodeModelCatalog(models, providers, this.proxyUrl);
   }
 
   private budgetFor(defaults: BudgetDefaults, level: 'tenant' | 'project' | KeyType): BifrostBudget {
