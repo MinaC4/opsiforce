@@ -87,6 +87,12 @@ data:
           location = /oauth2/auth {
             internal;
             proxy_pass http://127.0.0.1:4180/oauth2/auth;
+            # The X-Auth-Request-Access-Token response header can contain a
+            # large OIDC token. Nginx's default 4 KiB upstream header buffer
+            # returns 500 after login when that header exceeds the default.
+            proxy_buffer_size 32k;
+            proxy_buffers 8 32k;
+            proxy_busy_buffers_size 64k;
             proxy_set_header Host $host;
             proxy_set_header X-Real-IP $remote_addr;
             proxy_set_header X-Forwarded-Uri $request_uri;
