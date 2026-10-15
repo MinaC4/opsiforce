@@ -11,7 +11,7 @@ backend:
       memory: 300Mi
 
 imagePullSecrets: []
-affinity: {}
+affinity: null
 serviceAccountName: opsiforce-agent
 
 config:
@@ -25,7 +25,7 @@ config:
   storageClaimSize: 50Gi
   agentContainerImage: opsiforce-agent:0.35.4
   agentContainerImagePullPolicy: Never
-  agentAffinity: {}
+  agentAffinity: null
   agentNodeSelector: {}
   agentTolerations: []
   bifrostUseOpenrouter: "true"

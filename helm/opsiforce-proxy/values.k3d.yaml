@@ -1,5 +1,5 @@
 imagePullSecrets: []
-affinity: {}
+affinity: null
 
 image:
   repository: nginx

@@ -1,3 +1,5 @@
+fullnameOverride: opsiforce-frontend
+
 frontend:
   image:
     repository: opsiforce-frontend
@@ -10,4 +12,4 @@ frontend:
       memory: 128Mi
 
 imagePullSecrets: []
-affinity: {}
+affinity: null

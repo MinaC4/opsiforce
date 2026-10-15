@@ -3,6 +3,12 @@
 # on the same Kubernetes node.
 fullnameOverride: opsiforce
 
+# The base chart targets a hosted cluster and pins its workloads to cloud
+# regions. Null removes those inherited selectors so the single k3d node can
+# schedule the platform and tenant agents.
+agent:
+  affinity: null
+
 storage:
   type: pvc
   pvcName: opsiforce-cephfs
@@ -17,7 +23,7 @@ valkey:
     requestedSize: 1Gi
     className: local-path
     keepPvc: true
-  affinity: {}
+  affinity: null
   resources:
     requests:
       cpu: 50m

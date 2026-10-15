@@ -4,7 +4,7 @@ image:
   pullPolicy: Never
 
 imagePullSecrets: []
-affinity: {}
+affinity: null
 serviceAccount:
   name: proxy
 

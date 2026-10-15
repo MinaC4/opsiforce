@@ -24,6 +24,8 @@ ports:
 deployment:
   replicas: 1
   additionalVolumes:
+    - name: plugins-local
+      emptyDir: {}
     - name: opsiforce-lan-ca
       configMap:
         name: opsiforce-lan-ca

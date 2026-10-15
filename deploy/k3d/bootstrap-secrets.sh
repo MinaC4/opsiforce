@@ -11,11 +11,14 @@ kubectl config current-context | grep -qx 'k3d-openchoreo' || {
   exit 1
 }
 kubectl create namespace "$namespace" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+kubectl create namespace traefik --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 
 ca_file=$(mktemp)
 kubectl get secret cluster-gateway-ca -n openchoreo-control-plane \
   -o jsonpath='{.data.ca\.crt}' | base64 -D > "$ca_file"
 kubectl create configmap opsiforce-lan-ca -n "$namespace" \
+  --from-file=ca.crt="$ca_file" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+kubectl create configmap opsiforce-lan-ca -n traefik \
   --from-file=ca.crt="$ca_file" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
 rm -f "$ca_file"
 
@@ -124,16 +127,19 @@ platform_client_secret=$(secret_value opsiforce-keycloak-credentials platform-cl
 managed_client_secret=$(secret_value opsiforce-keycloak-credentials managed-client-secret)
 admin_user_password=$(secret_value opsiforce-keycloak-credentials admin-user-password)
 oauth_file=$(mktemp)
-if ! kubectl get secret opsiforce-oauth2-credentials -n "$namespace" >/dev/null 2>&1; then
-  write_secret_file "$oauth_file" \
-    "cookie-secret=$(openssl rand -base64 32 | tr -d '\n')" \
-    "client-secret=${platform_client_secret}"
-fi
-if [ -s "$oauth_file" ]; then
-  apply_secret_once opsiforce-oauth2-credentials "$oauth_file"
-else
-  rm -f "$oauth_file"
-fi
+cookie_secret=$(secret_value opsiforce-oauth2-credentials cookie-secret)
+case "${#cookie_secret}" in
+  16|24|32) ;;
+  *) cookie_secret=$(openssl rand -hex 16) ;;
+esac
+oauth_client_secret=$(secret_value opsiforce-oauth2-credentials client-secret)
+if [ -z "$oauth_client_secret" ]; then oauth_client_secret=$platform_client_secret; fi
+write_secret_file "$oauth_file" \
+  "cookie-secret=${cookie_secret}" \
+  "client-secret=${oauth_client_secret}"
+kubectl create secret generic opsiforce-oauth2-credentials -n "$namespace" \
+  --from-env-file="$oauth_file" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+rm -f "$oauth_file"
 
 kubectl create configmap opsiforce-keycloak-realm-template -n "$namespace" \
   --from-file=realm.json.tmpl=deploy/k3d/keycloak-realm.json.tmpl \

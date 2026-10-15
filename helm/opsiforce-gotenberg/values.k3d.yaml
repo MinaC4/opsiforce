@@ -16,5 +16,5 @@ resources:
     cpu: "1"
     memory: 1Gi
 
-affinity: {}
+affinity: null
 imagePullSecrets: []

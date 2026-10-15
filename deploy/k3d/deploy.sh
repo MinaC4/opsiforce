@@ -27,19 +27,27 @@ for image in opsiforce-backend:k3d opsiforce-frontend:k3d opsiforce-runtime-prox
 done
 
 sh deploy/k3d/bootstrap-secrets.sh
-k3d image import \
-  opsiforce-backend:k3d \
-  opsiforce-frontend:k3d \
-  opsiforce-runtime-proxy:k3d \
-  opsiforce-agent:0.35.4 \
-  --cluster openchoreo
+if [ "${SKIP_IMAGE_IMPORT:-0}" = "1" ]; then
+  echo 'Skipping image import because the images are already present in the cluster.'
+else
+  k3d image import \
+    opsiforce-backend:k3d \
+    opsiforce-frontend:k3d \
+    opsiforce-runtime-proxy:k3d \
+    opsiforce-agent:0.35.4 \
+    --cluster openchoreo
+fi
 
 kubectl apply -f deploy/k3d/postgres.yaml
 kubectl rollout status statefulset/opsiforce-postgres -n "$namespace" --timeout=10m
 
 "$helm_bin" upgrade --install opsiforce-infra helm/opsiforce \
   --namespace "$namespace" --create-namespace \
-  -f helm/opsiforce/values.k3d.yaml --wait --timeout=10m
+  -f helm/opsiforce/values.k3d.yaml --timeout=10m
+# The platform PVC uses local-path with WaitForFirstConsumer. It becomes Bound
+# only after the backend pod is scheduled below, so waiting on every infra
+# resource here would deadlock before that release can be installed.
+kubectl rollout status deployment/opsiforce-infra-valkey -n "$namespace" --timeout=5m
 
 "$helm_bin" repo add bifrost https://maximhq.github.io/bifrost/helm-charts >/dev/null 2>&1 || true
 "$helm_bin" repo update bifrost >/dev/null
@@ -56,11 +64,15 @@ kubectl rollout status deployment/opsiforce-keycloak -n "$namespace" --timeout=1
 
 "$helm_bin" repo add traefik https://traefik.github.io/charts >/dev/null 2>&1 || true
 "$helm_bin" repo update traefik >/dev/null
+# The cluster already provides Gateway API CRDs at v1.5.0-dev. Traefik 39.0.8
+# bundles v1.4.0 and the cluster's safe-upgrades policy rejects that downgrade,
+# so install only Traefik's provider CRDs and let Helm reuse Gateway API.
+kubectl apply -f deploy/k3d/crds/traefik-v39/
 traefik_values=$(mktemp)
 sed 's/@@OIDC_PLUGIN_VERSION@@/v0.19.0/g' helm/local-infra/traefik.values.yaml > "$traefik_values"
 "$helm_bin" upgrade --install traefik traefik/traefik \
   --version 39.0.8 --namespace traefik --create-namespace \
-  -f "$traefik_values" -f deploy/k3d/traefik.values.k3d.yaml \
+  --skip-crds -f "$traefik_values" -f deploy/k3d/traefik.values.k3d.yaml \
   --wait --timeout=15m
 rm -f "$traefik_values"
 

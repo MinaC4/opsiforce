@@ -19,7 +19,7 @@ resources:
 autoscaling:
   enabled: false
 
-affinity: {}
+affinity: null
 
 storage:
   mode: postgres
