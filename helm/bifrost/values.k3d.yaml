@@ -45,7 +45,9 @@ postgresql:
     passwordKey: password
 
 bifrost:
-  sourceOfTruth: "config.json"
+  # Preserve provider/config changes made in the dashboard in the PostgreSQL
+  # config store while still seeding the baseline provider setup from Helm.
+  sourceOfTruth: "split"
   encryptionKeySecret:
     name: opsiforce-bifrost-encryption
     key: key
