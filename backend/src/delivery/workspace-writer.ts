@@ -43,6 +43,37 @@ export class WorkspaceWriter {
     await writeTextAtomic(path.join(this.root(directory), AGENTS_DIR, `${slug}.md`), contents);
   }
 
+  async addAgentModel(directory: string, reference: string | null): Promise<void> {
+    if (!reference) return;
+    const [providerID, ...parts] = reference.split('/');
+    const modelID = parts.join('/').split('#', 1)[0];
+    if (!providerID || !modelID) return;
+
+    const file = path.join(this.root(directory), OPENCODE_CONFIG_FILE);
+    const config = (await readJson(file)) ?? {};
+    const providers = isRecord(config.providers) ? { ...config.providers } : {};
+    const previous = isRecord(providers[providerID]) ? providers[providerID] : {};
+    const models = isRecord(previous.models) ? { ...previous.models } : {};
+    const previousModel = isRecord(models[modelID]) ? models[modelID] : {};
+    models[modelID] = { ...previousModel, name: previousModel.name ?? modelID };
+
+    providers[providerID] = {
+      ...previous,
+      name: previous.name ?? providerID.replaceAll(/[-_]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()),
+      // Bifrost's unified OpenAI-compatible endpoint routes this model using
+      // its provider/model prefix, including providers added after install.
+      package: previous.package ?? 'aisdk:@ai-sdk/openai-compatible',
+      settings: {
+        ...(isRecord(previous.settings) ? previous.settings : {}),
+        baseURL: isRecord(previous.settings)
+          ? (previous.settings.baseURL ?? '{env:OPENAI_BASE_URL}')
+          : '{env:OPENAI_BASE_URL}',
+      },
+      models,
+    };
+    await writeTextAtomic(file, `${JSON.stringify({ ...config, providers }, null, 2)}\n`);
+  }
+
   async installSkill(directory: string, name: string, tree: SkillTree): Promise<void> {
     const target = path.join(this.root(directory), SKILLS_DIR, name);
     if (!(await exists(target))) {
@@ -143,6 +174,10 @@ async function readJson(file: string): Promise<JsonRecord | null> {
   } catch {
     return null;
   }
+}
+
+function isRecord(value: unknown): value is JsonRecord {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 async function exists(target: string): Promise<boolean> {

@@ -98,6 +98,7 @@ export const configuration = () => {
     gotenbergUrl: process.env.GOTENBERG_URL || 'http://opsiforce-gotenberg:3006',
     bifrostProxyUrl: process.env.BIFROST_PROXY_URL || '',
     bifrostPodProxyUrl: process.env.BIFROST_POD_PROXY_URL || process.env.BIFROST_PROXY_URL || '',
+    bifrostUseOpenrouter: process.env.BIFROST_USE_OPENROUTER || 'false',
     bifrostAdminUsername: process.env.BIFROST_ADMIN_USERNAME || '',
     bifrostAdminPassword: process.env.BIFROST_ADMIN_PASSWORD || '',
     workspaceCleanupRetentionDays: 7,

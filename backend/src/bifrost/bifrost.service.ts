@@ -26,6 +26,7 @@ export class BifrostService {
   private readonly podProxyUrl: string;
   private readonly adminUsername: string;
   private readonly adminPassword: string;
+  private readonly allowAnyProvider: boolean;
 
   constructor(
     private readonly configService: ConfigService,
@@ -35,10 +36,22 @@ export class BifrostService {
     this.podProxyUrl = this.configService.get<string>('bifrostPodProxyUrl', '') || this.proxyUrl;
     this.adminUsername = this.configService.get<string>('bifrostAdminUsername', '');
     this.adminPassword = this.configService.get<string>('bifrostAdminPassword', '');
+    this.allowAnyProvider = this.configService.get<string>('bifrostUseOpenrouter', 'false') === 'true';
   }
 
   isEnabled(): boolean {
     return !!this.proxyUrl && !!this.adminUsername && !!this.adminPassword;
+  }
+
+  async listModels(): Promise<Array<{ provider: string; name: string }>> {
+    if (!this.isEnabled()) return [];
+    const response = await this.request<{ models?: Array<{ provider?: string; name?: string }> }>(
+      'GET',
+      '/api/models?limit=1000'
+    );
+    return (response.models ?? []).filter(
+      (model): model is { provider: string; name: string } => !!model.provider && !!model.name
+    );
   }
 
   private budgetFor(defaults: BudgetDefaults, level: 'tenant' | 'project' | KeyType): BifrostBudget {
@@ -256,12 +269,19 @@ export class BifrostService {
     const payload: CreateVirtualKeyRequest = {
       name: `project-${projectId.slice(0, 8)}-${keyType}`,
       description: `Virtual key (${keyType}) for project ${projectId}${tenantId ? ` (tenant: ${tenantId})` : ' (pool)'}`,
-      provider_configs: BIFROST_PROVIDER_CONFIGS[keyType].map(({ provider, weight }) => ({
-        provider,
-        weight,
-        allowed_models: ['*'],
-        key_ids: ['*'],
-      })),
+      // Providers added later in the Bifrost dashboard should be usable by
+      // Opsiforce agents without rotating every project's virtual key.
+      ...(this.allowAnyProvider ? { allow_all_providers: true } : {}),
+      ...(BIFROST_PROVIDER_CONFIGS[keyType].length > 0
+        ? {
+            provider_configs: BIFROST_PROVIDER_CONFIGS[keyType].map(({ provider, weight }) => ({
+              provider,
+              weight,
+              allowed_models: ['*'],
+              key_ids: ['*'],
+            })),
+          }
+        : {}),
       budgets: [this.budgetFor(budgets, keyType)],
       ...(teamId ? { team_id: teamId } : {}),
     };
@@ -347,11 +367,27 @@ export class BifrostService {
     const backendKey = pick('backend');
     if (!chatKey || !backendKey) return null;
 
+    // Upgrade keys created before the dynamic-provider flag was enabled.
+    await Promise.all([chatKey, backendKey].map((key) => this.allowAllProviders(key.bifrostKeyId)));
+
     return {
       bifrostApiKey: chatKey.bifrostKeyToken,
       bifrostBackendApiKey: backendKey.bifrostKeyToken,
       bifrostProxyUrl: this.podProxyUrl,
     };
+  }
+
+  private async allowAllProviders(keyId: string): Promise<void> {
+    if (!this.allowAnyProvider) return;
+    const current = await this.request<{
+      virtual_key?: { allow_all_providers?: boolean; provider_configs?: unknown[] };
+    }>('GET', `/api/governance/virtual-keys/${keyId}`);
+    if (current.virtual_key?.allow_all_providers !== true || (current.virtual_key.provider_configs?.length ?? 0) > 0) {
+      await this.request('PUT', `/api/governance/virtual-keys/${keyId}`, {
+        allow_all_providers: true,
+        provider_configs: [],
+      });
+    }
   }
 
   async getProjectChatKeyToken(projectId: string, projectEnvironmentId?: string): Promise<string | null> {

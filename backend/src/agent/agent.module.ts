@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { BifrostModule } from '../bifrost/bifrost.module';
 import { AgentTemplateStore } from '../agent-template/agent-template.store';
 import { ProjectModule } from '../project/project.module';
 import { AgentBundleReader } from './agent-bundle.reader';
@@ -13,7 +14,7 @@ import { AgentService } from './agent.service';
 
 @Global()
 @Module({
-  imports: [ProjectModule],
+  imports: [ProjectModule, BifrostModule],
   controllers: [AgentController],
   providers: [
     AgentRepository,

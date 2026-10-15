@@ -51,6 +51,18 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.config.databaseUrlSecretName }}
                   key: {{ .Values.config.databaseUrlSecretKey | default "DATABASE_URL" }}
+            {{- if .Values.config.bifrostAdminSecretName }}
+            - name: BIFROST_ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.bifrostAdminSecretName }}
+                  key: username
+            - name: BIFROST_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.config.bifrostAdminSecretName }}
+                  key: password
+            {{- end }}
           {{- end }}
           volumeMounts:
             - name: workspace-data

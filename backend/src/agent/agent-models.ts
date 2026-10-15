@@ -20,6 +20,7 @@ interface CatalogProvider {
 export type ModelCatalog = Record<string, CatalogProvider>;
 
 let cached: ModelCatalog | null = null;
+let liveCatalog: ModelCatalog = {};
 
 export function modelCatalogPath(): string {
   return join(process.cwd(), '..', 'agent-config', 'models.json');
@@ -71,7 +72,7 @@ export function assertModelSelection(model: string, variant: string | null, cata
   const providerId = separator === -1 ? model : model.slice(0, separator);
   const modelId = separator === -1 ? '' : model.slice(separator + 1);
 
-  const provider = catalog[providerId];
+  const provider = mergedModelCatalog(catalog)[providerId];
   if (!provider) throw modelUnknown('provider', providerId);
 
   const entry = provider.models?.[modelId];
@@ -92,7 +93,34 @@ export interface ModelCatalogProvider {
   models: ModelCatalogModel[];
 }
 
-export function modelCatalogResponse(catalog = readModelCatalog()): ModelCatalogProvider[] {
+export function updateLiveModelCatalog(models: Array<{ provider: string; name: string }>): void {
+  const next: ModelCatalog = {};
+  for (const { provider, name } of models) {
+    const entry = (next[provider] ??= { name: providerName(provider), models: {} });
+    entry.models![name] = { name };
+  }
+  liveCatalog = next;
+}
+
+function mergedModelCatalog(catalog: ModelCatalog): ModelCatalog {
+  const merged: ModelCatalog = { ...catalog };
+  for (const [providerId, provider] of Object.entries(liveCatalog)) {
+    const existing = merged[providerId];
+    merged[providerId] = {
+      ...existing,
+      ...provider,
+      models: { ...existing?.models, ...provider.models },
+    };
+  }
+  return merged;
+}
+
+function providerName(provider: string): string {
+  if (provider.toLowerCase() === 'openrouter') return 'OpenRouter';
+  return provider.replaceAll(/[-_]+/g, ' ').replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+export function modelCatalogResponse(catalog = mergedModelCatalog(readModelCatalog())): ModelCatalogProvider[] {
   return Object.entries(catalog)
     .map(([providerId, provider]) => ({
       id: providerId,

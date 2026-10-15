@@ -131,6 +131,7 @@ export class DeliveryService {
     await this.writer.setDefaultAgent(plan.directory, plan.runtimeAgentSlug);
     if (plan.agentFile) {
       await this.writer.writeAgentPrompt(plan.directory, plan.agentFile.slug, renderAgentFile(plan.agentFile));
+      await this.writer.addAgentModel(plan.directory, plan.agentFile.model);
     }
     for (const skill of plan.skills) {
       await this.writer.installSkill(plan.directory, skill.name, skill.tree);

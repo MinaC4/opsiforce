@@ -31,7 +31,8 @@ import type { AgentExportPreview } from './agent-export';
 import { AgentExportService } from './agent-export.service';
 import type { AgentImportResult, ImportAgentDto } from './agent-import';
 import { AgentImportService } from './agent-import.service';
-import { modelCatalogResponse, type ModelCatalogProvider } from './agent-models';
+import { BifrostService } from '../bifrost/bifrost.service';
+import { modelCatalogResponse, type ModelCatalogProvider, updateLiveModelCatalog } from './agent-models';
 import { AgentService } from './agent.service';
 import type {
   AgentCaller,
@@ -60,7 +61,8 @@ export class AgentController {
     private readonly importService: AgentImportService,
     private readonly uploadService: ProjectImportUploadService,
     private readonly userService: UserService,
-    private readonly projectService: ProjectService
+    private readonly projectService: ProjectService,
+    private readonly bifrostService: BifrostService
   ) {}
 
   @Get()
@@ -87,7 +89,12 @@ export class AgentController {
 
   @Get('models')
   @RelaxPermission()
-  models(): ModelCatalogProvider[] {
+  async models(): Promise<ModelCatalogProvider[]> {
+    try {
+      updateLiveModelCatalog(await this.bifrostService.listModels());
+    } catch {
+      // Keep the shipped catalog available during a temporary gateway outage.
+    }
     return modelCatalogResponse();
   }
 

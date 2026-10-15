@@ -16,6 +16,7 @@ export interface BifrostBudget {
 export interface CreateVirtualKeyRequest {
   name: string;
   description?: string;
+  allow_all_providers?: boolean;
   provider_configs?: BifrostProviderConfig[];
   budgets?: BifrostBudget[];
   team_id?: string;
@@ -28,6 +29,7 @@ export interface BifrostVirtualKey {
   value: string;
   description: string;
   is_active: boolean;
+  allow_all_providers?: boolean;
   provider_configs: BifrostProviderConfig[];
 }
 
